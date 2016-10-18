@@ -1,0 +1,14 @@
+e9ef4075fc85fee085e0bf582b481681 *DESCRIPTION
+783b7e40cdfb4a1344d15b1f7081af66 *LICENSE
+48fa40c96c3d310f746e80e82e51eb43 *NAMESPACE
+1d003a58dc3b01fd4b42876f605a6d49 *R/constructHeader.R
+04db04b26e6b9f3c67c99d421ca53a81 *R/getSurvey.R
+989be816a5651baba7b2fa682cf70129 *R/getSurveys.R
+91f817447122f4c23121a9a05944a9de *README.md
+d0b701c71ecbaabda639d39dd7e11359 *build/vignette.rds
+135c108f3a7229b5f0bb47b31eb55825 *inst/doc/qualtRics.Rmd
+14c222a302fb83f36e5f76264f6f0829 *inst/doc/qualtRics.html
+e048fcc75b93b4567164fe4a5e9a7b69 *man/constructHeader.Rd
+b129feeb2c54a62373c8a919fbb63131 *man/getSurvey.Rd
+a1d105e40b31676766b428406f67b7c0 *man/getSurveys.Rd
+135c108f3a7229b5f0bb47b31eb55825 *vignettes/qualtRics.Rmd
