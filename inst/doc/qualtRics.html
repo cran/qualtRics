@@ -12,7 +12,7 @@
 
 <meta name="author" content="Jasper Ginn" />
 
-<meta name="date" content="2016-10-17" />
+<meta name="date" content="2016-11-29" />
 
 <title>qualtRics</title>
 
@@ -70,12 +70,12 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">qualtRics</h1>
 <h4 class="author"><em>Jasper Ginn</em></h4>
-<h4 class="date"><em>2016-10-17</em></h4>
+<h4 class="date"><em>2016-11-29</em></h4>
 
 
 
-<p>This project contains an R package to interact with the <a href="https://www.qualtrics.com/">Qualtrics API</a>.</p>
-<p>Note that your institution must support API access and that it must be enabled for your account. Whoever manages your Qualtrics account can help you with this. Please refer to the <a href="https://api.qualtrics.com/docs/authentication">Qualtrics documentation</a> on how to find your API token. You’ll also need your institution-specific <a href="https://api.qualtrics.com/docs/root-url">base url</a>.</p>
+<p>This project contains an R package to interact with the <a href="https://www.qualtrics.com/">Qualtrics</a> API. It is currently under development. I will add more functionality later.</p>
+<p>Note that your institution must support API access and that it must be enabled for your account. Whoever manages your Qualtrics account can help you with this. Please refer to the <a href="https://api.qualtrics.com/docs/authentication">Qualtrics documentation</a> on how to find your API token.</p>
 <div id="installation" class="section level2">
 <h2>Installation</h2>
 <p>To install this package, execute the following in R:</p>
@@ -84,21 +84,35 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">install.packages</span>(<span class="st">&quot;devtools&quot;</span>)
 devtools::<span class="kw">install_github</span>(<span class="st">&quot;JasperHG90/qualtRics&quot;</span>)</code></pre></div>
 </div>
+<div id="dependencies" class="section level2">
+<h2>Dependencies</h2>
+<p>This package depends on <code>httr</code>, <code>stringr</code>, <code>jsonlite</code> and <code>XML</code>. All dependencies will be installed when you install <code>qualtRics</code>.</p>
+</div>
+<div id="updates" class="section level2">
+<h2>Updates</h2>
+<p>Periodically check this repository for updates and execute <code>devtools::install_github(&quot;JasperHG90/qualtRics&quot;)</code> to update.</p>
+</div>
 <div id="usage" class="section level2">
 <h2>Usage</h2>
 <p>Currently, the package contains three functions. It supports fetching a list of courses and their IDs from qualtrics, as well as downloading and reading a survey export.</p>
-<p>Note that, while requests will work without a <a href="https://api.qualtrics.com/docs/root-url">base url</a>, it is desirable that you supply it to the functions. Supplying the correct url will reduce the number of errors you’ll experience. Please refer to the <a href="https://api.qualtrics.com/docs/root-url">official documentation</a> to find out your institution-specific base url.</p>
+<p>Note that, while requests will work without a <a href="https://api.qualtrics.com/docs/root-url">root url</a> for the <code>getSurveys</code> function, it is desirable that you supply it. Supplying the correct url will reduce the number of errors you’ll experience. The <code>getSurvey</code> function requires you to pass this root url. Please refer to the <a href="https://api.qualtrics.com/docs/root-url">official documentation</a> to find out your institution-specific root url.</p>
 <p>Note that you can only export surveys that you own, or to which you have been given explicit administration rights.</p>
 <div id="commands" class="section level3">
 <h3>Commands</h3>
 <p>Load the package:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(qualtRics)</code></pre></div>
-<p>Construct the header information:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">head &lt;-<span class="st"> </span><span class="kw">constructHeader</span>(<span class="dt">API.TOKEN =</span> <span class="st">&quot;&lt;yourapitoken&gt;&quot;</span>)</code></pre></div>
+<p>Register your Qualtrics API key. You need to do this only once per R session:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">registerApiKey</span>(<span class="dt">API.TOKEN =</span> <span class="st">&quot;&lt;yourapitoken&gt;&quot;</span>)</code></pre></div>
 <p>Get a data frame of surveys:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">surveys &lt;-<span class="st"> </span><span class="kw">getSurveys</span>(head, <span class="dt">survey_baseurl=</span><span class="st">&quot;https://leidenuniv.eu.qualtrics.com/API/v3/responseexports/&quot;</span>) <span class="co"># URL is for my own institution</span></code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">surveys &lt;-<span class="st"> </span><span class="kw">getSurveys</span>(<span class="dt">root_url=</span><span class="st">&quot;https://leidenuniv.eu.qualtrics.com&quot;</span>) <span class="co"># URL is for my own institution</span></code></pre></div>
 <p>Export a survey and load it into R:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mysurvey &lt;-<span class="st"> </span><span class="kw">getSurvey</span>(<span class="dt">surveyID =</span> surveys$id[<span class="dv">6</span>], <span class="dt">headers =</span> head, <span class="dt">base_url =</span> <span class="st">&quot;https://leidenuniv.eu.qualtrics.com/API/v3/responseexports/&quot;</span>, <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mysurvey &lt;-<span class="st"> </span><span class="kw">getSurvey</span>(<span class="dt">surveyID =</span> surveys$id[<span class="dv">6</span>], <span class="dt">root_url =</span> <span class="st">&quot;https://leidenuniv.eu.qualtrics.com&quot;</span>, <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</code></pre></div>
+<p>You can request a CSV, JSON or XML file:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mysurvey &lt;-<span class="st"> </span><span class="kw">getSurvey</span>(<span class="dt">surveyID =</span> surveys$id[<span class="dv">6</span>], <span class="dt">format=</span><span class="st">&quot;csv&quot;</span>, <span class="dt">root_url =</span> <span class="st">&quot;https://leidenuniv.eu.qualtrics.com&quot;</span>, <span class="dt">verbose =</span> <span class="ot">TRUE</span>) <span class="co"># CSV</span>
+mysurvey &lt;-<span class="st"> </span><span class="kw">getSurvey</span>(<span class="dt">surveyID =</span> surveys$id[<span class="dv">6</span>], <span class="dt">format=</span><span class="st">&quot;json&quot;</span>, <span class="dt">root_url =</span> <span class="st">&quot;https://leidenuniv.eu.qualtrics.com&quot;</span>, <span class="dt">verbose =</span> <span class="ot">TRUE</span>) <span class="co"># JSON</span>
+mysurvey &lt;-<span class="st"> </span><span class="kw">getSurvey</span>(<span class="dt">surveyID =</span> surveys$id[<span class="dv">6</span>], <span class="dt">format=</span><span class="st">&quot;xml&quot;</span>, <span class="dt">root_url =</span> <span class="st">&quot;https://leidenuniv.eu.qualtrics.com&quot;</span>, <span class="dt">verbose =</span> <span class="ot">TRUE</span>) <span class="co"># XML</span></code></pre></div>
+<p>You may also store the results in a filepath of your choosing:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">mysurvey &lt;-<span class="st"> </span><span class="kw">getSurvey</span>(<span class="dt">surveyID =</span> surveys$id[<span class="dv">6</span>], <span class="dt">format=</span><span class="st">&quot;csv&quot;</span>, <span class="dt">save_dir =</span> <span class="st">&quot;/users/jasper/desktop/&quot;</span>, <span class="dt">root_url =</span> <span class="st">&quot;https://leidenuniv.eu.qualtrics.com&quot;</span>, <span class="dt">verbose =</span> <span class="ot">TRUE</span>)</code></pre></div>
 </div>
 </div>
 <div id="other-information" class="section level2">

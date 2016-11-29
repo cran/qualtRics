@@ -4,16 +4,17 @@
 \alias{getSurvey}
 \title{Export a survey and download into R}
 \usage{
-getSurvey(surveyID, headers,
-  base_url = "https://yourdatacenterid.qualtrics.com/API/v3/responseexports/",
-  verbose = FALSE)
+getSurvey(surveyID, root_url, format = c("csv", "json", "xml", "spss"),
+  save_dir = tempdir(), verbose = FALSE)
 }
 \arguments{
 \item{surveyID}{Unique ID for the survey you want to download. Returned as 'id' by the \link[qualtRics]{getSurveys} function.}
 
-\item{headers}{'headers' object - returned by the 'constructHeader' function. See \link[qualtRics]{constructHeader}.}
+\item{root_url}{Base url for your institution (see \url{https://api.qualtrics.com/docs/csv}. You need to supply this url. Your query will NOT work without it.)}
 
-\item{base_url}{Base url for your institution (see \url{https://api.qualtrics.com/docs/csv}. If you do not fill in anything, the function will use the default url. Using your institution-specific url can significantly speed up queries.)}
+\item{format}{Type of file that will be downloaded. CSV will return a data frame, JSON and XML will return a list. SPSS is currently not supported. Defaults to CSV.}
+
+\item{save_dir}{Directory where survey results will be stored. Defaults to a temporary directory which is cleaned when your R session is terminated. This parameter is useful if you'd like to store survey results.}
 
 \item{verbose}{Print verbose messages to the R console? Defaults to FALSE}
 }
@@ -22,14 +23,14 @@ Export a qualtrics survey you own and import the survey directly into R. NOTE: I
 }
 \examples{
 \dontrun{
-head <- constructHeader("<YOUR-API-KEY-HERE>")
-surveys <- getSurveys(head,
-                      "https://leidenuniv.eu.qualtrics.com/API/v3/responseexports/")
+registerApiKey("<YOUR-QUALTRICS-API-KEY>")
+surveys <- getSurveys("https://leidenuniv.eu.qualtrics.com")
                       # URL is for my own institution.
                       # Substitute with your own institution's url
 mysurvey <- getSurvey(surveys$id[6],
-                      head,
-                      "https://leidenuniv.eu.qualtrics.com/API/v3/responseexports/",
+                      format = "csv",
+                      save_dir = tempdir(),
+                      "https://leidenuniv.eu.qualtrics.com",
                       verbose=TRUE)
 }
 }

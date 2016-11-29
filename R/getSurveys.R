@@ -16,8 +16,7 @@
 
 #' Retrieve a list of all active surveys that you own on qualtrics
 #'
-#' @param headers 'headers' object - returned by the 'constructHeader' function. See \link[qualtRics]{constructHeader}.
-#' @param survey_baseurl Base url for your institution (see \url{https://api.qualtrics.com/docs/root-url}. If you do not fill in anything, the function will use the default url. Using your institution-specific url can significantly speed up queries.)
+#' @param root_url Base url for your institution (see \url{https://api.qualtrics.com/docs/root-url}. If you do not fill in anything, the function will use the default url. Using your institution-specific url can significantly speed up queries.)
 #'
 #' @seealso See \url{https://api.qualtrics.com/docs} for documentation on the Qualtrics API.
 #' @author Jasper Ginn
@@ -27,20 +26,33 @@
 #' @export
 #' @examples
 #' \dontrun{
-#' head <- constructHeader("<YOUR-API-KEY-HERE>")
-#' surveys <- getSurveys(head,
-#'                       "https://leidenuniv.eu.qualtrics.com/API/v3/responseexports/")
+#' registerApiKey("<YOUR-QUALTRICS-API-KEY>")
+#' surveys <- getSurveys("https://leidenuniv.eu.qualtrics.com")
 #'                       # URL is for my own institution.
 #'                       # Substitute with your own institution's url
 #' mysurvey <- getSurvey(surveys$id[6],
-#'                       head,
-#'                       "https://leidenuniv.eu.qualtrics.com/API/v3/responseexports/",
+#'                       format = "csv",
+#'                       save_dir = tempdir(),
+#'                       "https://leidenuniv.eu.qualtrics.com",
 #'                       verbose=TRUE)
 #' }
 
-getSurveys <- function(headers, survey_baseurl = "https://yourdatacenterid.qualtrics.com/API/v3/surveys") {
+getSurveys <- function(root_url = "https://yourdatacenterid.qualtrics.com") {
+
+  # Look in temporary directory. If file 'qualtRics_header.rds' does not exist, then abort and tell user to register API key first
+  f <- list.files(tempdir())
+  if(!"qualtRics_header.rds" %in% f) stop("You need to register your qualtrics API key first using the 'registerApiKey()' function.")
+
+  # Read headers information
+  headers <- readRDS(paste0(tempdir(), "/qualtRics_header.rds"))
+
+  # Function-specific API stuff
+  root_url <- paste0(root_url,
+                           ifelse(substr(root_url, nchar(root_url), nchar(root_url)) == "/",
+                                  "API/v3/surveys",
+                                  "/API/v3/surveys"))
   # Send GET request to list all surveys
-  res <- GET(survey_baseurl, add_headers(headers))
+  res <- GET(root_url, add_headers(headers))
   # Return
   return(do.call(rbind.data.frame, content(res)$result$elements))
 }

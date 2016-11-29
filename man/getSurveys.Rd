@@ -4,27 +4,24 @@
 \alias{getSurveys}
 \title{Retrieve a list of all active surveys that you own on qualtrics}
 \usage{
-getSurveys(headers,
-  survey_baseurl = "https://yourdatacenterid.qualtrics.com/API/v3/surveys")
+getSurveys(root_url = "https://yourdatacenterid.qualtrics.com")
 }
 \arguments{
-\item{headers}{'headers' object - returned by the 'constructHeader' function. See \link[qualtRics]{constructHeader}.}
-
-\item{survey_baseurl}{Base url for your institution (see \url{https://api.qualtrics.com/docs/root-url}. If you do not fill in anything, the function will use the default url. Using your institution-specific url can significantly speed up queries.)}
+\item{root_url}{Base url for your institution (see \url{https://api.qualtrics.com/docs/root-url}. If you do not fill in anything, the function will use the default url. Using your institution-specific url can significantly speed up queries.)}
 }
 \description{
 Retrieve a list of all active surveys that you own on qualtrics
 }
 \examples{
 \dontrun{
-head <- constructHeader("<YOUR-API-KEY-HERE>")
-surveys <- getSurveys(head,
-                      "https://leidenuniv.eu.qualtrics.com/API/v3/responseexports/")
+registerApiKey("<YOUR-QUALTRICS-API-KEY>")
+surveys <- getSurveys("https://leidenuniv.eu.qualtrics.com")
                       # URL is for my own institution.
                       # Substitute with your own institution's url
 mysurvey <- getSurvey(surveys$id[6],
-                      head,
-                      "https://leidenuniv.eu.qualtrics.com/API/v3/responseexports/",
+                      format = "csv",
+                      save_dir = tempdir(),
+                      "https://leidenuniv.eu.qualtrics.com",
                       verbose=TRUE)
 }
 }
