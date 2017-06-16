@@ -1,3 +1,19 @@
+#   Download qualtrics data into R
+#    Copyright (C) 2017 Jasper Ginn
+
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #    Download qualtrics data into R
 #    Copyright (C) 2016 Jasper Ginn
 
@@ -86,45 +102,6 @@ constructHeader <- function(API.TOKEN) {
   return(headers)
 }
 
-# Retrieve a JSON file containing quiz metadata
-#
-# @param surveyID Unique ID for the survey you want to download. Returned as 'id' by the \link[qualtRics]{getSurveys} function.
-# @param root_url Base url for your institution (see \url{https://api.qualtrics.com/docs/root-url}. If you do not fill in anything, the function will use the default url. Using your institution-specific url can significantly speed up queries.)
-#
-# @seealso See \url{https://api.qualtrics.com/docs} for documentation on the Qualtrics API.
-# @author Jasper Ginn
-
-getSurveyMetadata <- function(surveyID,
-                              root_url = "https://yourdatacenterid.qualtrics.com") {
-  # Check params
-  checkParams(root_url=root_url, check_qualtrics_api_key=TRUE)
-  # Function-specific API stuff
-  root_url <- appendRootUrl(root_url, "surveys")
-  # Add survey id
-  root_url <- paste0(root_url,
-                     "/",
-                     surveyID)
-  # GET request to download metadata
-  resp <- qualtricsApiRequest("GET", root_url)
-  # Get question information and map
-  qi <- resp$result$questions
-  cm <- resp$result$exportColumnMap
-  # Return list of mapping data and quiz information
-  md <- data.frame(
-    # Replace all special characters
-    "question" = gsub("[^[:alnum:]_]", "\\.", names(cm)),
-    "QID" = sapply(cm, function(x) x$question),
-    stringsAsFactors = FALSE
-  )
-  # Return
-  return(
-    list(
-      "mapping" = md,
-      "questions" = qi
-    )
-  )
-}
-
 # Check if httr GET result contains a warning
 # @param resp object returned by 'qualtRicsResponseCodes()'
 
@@ -139,29 +116,51 @@ checkForWarnings <- function(resp) {
 }
 
 # Check if parameters passed to functions are correct
-# @param save_dir Directory where survey results will be stored. Defaults to a temporary directory which is cleaned when your R session is terminated. This parameter is useful if you'd like to store survey results.
-# @param check_qualtrics_api_key TRUE/FALSE statement. Does function need to check if qualtrics key exists?
+# @param ... options passed to checkParams
 
-checkParams <- function(save_dir = NULL,
-                        root_url = NULL,
-                        check_qualtrics_api_key = FALSE
-                        ) {
+checkParams <- function(...) {
+  args <- list(...)
   ### root_url
-  if(!is.null(root_url)) {
-    # Ensure that root url is character
-    assertthat::assert_that(assertthat::is.string(root_url))
+  assert_rootUrl_stored()
+  ### API Token
+  assert_apikey_stored()
+  ### Options
+  if(all(c("verbose", "convertStandardColumns",
+           "useLocalTime", "useLabels") %in% names(args))) {
+    assert_options_logical(
+      args$verbose,
+      args$convertStandardColumns,
+      args$useLocalTime,
+      args$useLabels
+    )
   }
-  ### save_dir
+
+  # Check if params are of the right type
+  if("startDate" %in% names(args)) {
+    if(!is.null(args$startDate)) assert_startDate_string(args$startDate)
+  }
+  if("endDate" %in% names(args)) {
+    if(!is.null(args$endDate)) assert_endDate_string(args$endDate)
+  }
+  if("lastResponseId" %in% names(args)) {
+    if(!is.null(args$lastResponseId)) assert_lastResponseId_string(args$lastResponseId)
+  }
   # Check if save_dir exists
-  if(!is.null(save_dir)) {
-    if(!file.info(save_dir)$isdir | is.na(file.info(save_dir)$isdir)) stop(paste0("The directory ", save_dir, " does not exist."))
+  if("save_dir" %in% names(args)) {
+    if(!is.null(args$save_dir)) assert_saveDir_exists(args$save_dir)
   }
-  ### check_qualtrics_api_key
-  if(check_qualtrics_api_key) {
-    # Look in temporary directory. If file 'qualtRics_header.rds' does not exist, then abort and tell user to register API key first
-    assert_apikey_stored(tempdir())
+  # Check if seenUnansweredRecode is NULL or else a string
+  if("seenUnansweredRecode" %in% names(args)) {
+    if(!is.null(args$seenUnansweredRecode)) assert_seenUnansweredRecode_string(args$seenUnansweredRecode)
   }
-  ### ..
+  # Check if limit > 0
+  if("limit" %in% names(args)) {
+    if(!is.null(args$limit)) assert_limit_abovezero(args$limit)
+  }
+  # Check if includedQuestionIds is a string
+  if("includedQuestionIds" %in% names(args)) {
+    if(!is.null(args$includedQuestionIds)) assert_includedQuestionIds_string(args$includedQuestionIds)
+  }
 }
 
 # Append proper end points to create root url
@@ -187,34 +186,76 @@ createRawPayload <- function(surveyID,
                              useLabels=TRUE,
                              lastResponseId=NULL,
                              startDate=NULL,
-                             endDate=NULL) {
+                             endDate=NULL,
+                             limit=NULL,
+                             useLocalTime=FALSE,
+                             seenUnansweredRecode=NULL,
+                             includedQuestionIds = NULL) {
+
   paste0(
     '{"format": ', '"', 'csv', '"' ,
-    ', "surveyId": ', '"', surveyID,
+    ', "surveyId": ', '"', surveyID, '"',
     ifelse(
       is.null(lastResponseId),
       "",
-      paste0('"' ,
+      paste0(
              ', "lastResponseId": ',
              '"',
-             lastResponseId)
+             lastResponseId,
+             '"')
     ) ,
     ifelse(
       is.null(startDate),
       "",
-      paste0('"' ,
+      paste0(
              ', "startDate": ',
              '"',
-             paste0(startDate,"T00:00:00Z"))
+             paste0(startDate,"T00:00:00Z"),
+             '"')
     ) ,
     ifelse(
       is.null(endDate),
       "",
-      paste0('"' ,
+      paste0(
              ', "endDate": ',
              '"',
-             paste0(endDate,"T00:00:00Z"))
-    ) , '", ',
+             paste0(endDate,"T00:00:00Z"),
+             '"')
+    ) ,
+    ifelse(
+      is.null(seenUnansweredRecode),
+      "",
+      paste0(
+             ', "seenUnansweredRecode": ',
+             '"',
+             seenUnansweredRecode,
+             '"')
+    ),
+    ifelse(
+      !useLocalTime,
+      "",
+      paste0(
+        ', "useLocalTime": ',
+        tolower(useLocalTime)
+        )
+    ),
+    ifelse(
+      is.null(includedQuestionIds),
+      "",
+      paste0(
+             ', "includedQuestionIds": ',
+             '[', paste0('"',includedQuestionIds, '"', collapse=", "), ']'
+      )
+    ),
+    ifelse(
+      is.null(limit),
+      "",
+      paste0(
+        ', "limit": ',
+        limit
+      )
+    ),
+    ', ',
     '"useLabels": ', tolower(useLabels),
     '}'
   )
@@ -227,8 +268,8 @@ qualtricsApiRequest <- function(verb = c("GET", "POST"), url = url,
                                 body = NULL, raw = FALSE) {
   # Match arg
   verb <- match.arg(verb)
-  # Get headers information
-  headers <- readRDS(paste0(tempdir(), "/qualtRics_header.rds"))
+  # Construct header
+  headers <- constructHeader(Sys.getenv("QUALTRICS_API_KEY"))
   # Send request to qualtrics API
   res <- httr::VERB(verb,
                     url = url,
@@ -251,8 +292,8 @@ qualtricsApiRequest <- function(verb = c("GET", "POST"), url = url,
 # @param
 
 downloadQualtricsExport <- function(check_url, verbose = FALSE) {
-  # Get headers
-  headers <- readRDS(paste0(tempdir(), "/", "qualtRics_header.rds"))
+  # Construct header
+  headers <- constructHeader(Sys.getenv("QUALTRICS_API_KEY"))
   # Create a progress bar and monitor when export is ready
   if(verbose) {
     pbar <- utils::txtProgressBar(min=0,
@@ -334,10 +375,17 @@ inferDataTypes <- function(data,
     } else if(col.name %in% qBin) {
       data[,col.name] <- factor(data[,col.name], levels=c("0", "1"))
     } else if(col.name %in% qDate) {
-      data[,col.name] <- lubridate::as_datetime(data[,col.name])
+      data[,col.name] <- lubridate::as_datetime(data[,col.name], tz=NULL)
     } else {
       NULL
     }
+
+    # Check if warning given
+    if(Sys.getenv("QUALTRICS_WARNING_DATE_GIVEN") == "") {
+      warning("The 'StartDate', 'EndDate' and 'RecordedDate' variables were converted without passing a specific timezone. If you like to set these timestamps to your own timezone, please visit https://www.qualtrics.com/support/survey-platform/getting-started/managing-your-account/ (under 'User Settings'). See https://api.qualtrics.com/docs/dates-and-times for more information about how the Qualtrics API handles dates and times.")
+      Sys.setenv("QUALTRICS_WARNING_DATE_GIVEN"=TRUE)
+    }
+
 
   }
 

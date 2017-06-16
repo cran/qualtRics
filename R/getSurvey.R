@@ -1,5 +1,5 @@
 #   Download qualtrics data into R
-#    Copyright (C) 2016 Jasper Ginn
+#    Copyright (C) 2017 Jasper Ginn
 
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -16,18 +16,18 @@
 
 #' Export a survey and download into R
 #'
-#' Export a qualtrics survey you own and import the survey directly into R. NOTE: If you keep getting errors try to use your institution's base URL. See \url{https://api.qualtrics.com/docs/root-url}.
+#' Export a qualtrics survey you own and import the survey directly into R.
 #'
-#' @param surveyID Unique ID for the survey you want to download. Returned as 'id' by the \link[qualtRics]{getSurveys} function.
-#' @param root_url Base url for your institution (see \url{https://api.qualtrics.com/docs/csv}. You need to supply this url. Your query will NOT work without it.).
-#' @param useLabels TRUE to export survey responses as Choice Text or FALSE to export survey responses as values
-#' @param convertStandardColumns logical, defaults to TRUE. If TRUE, then the function will convert general data columns (first name, last name, lat, lon, ip address, startdate, enddate etc.) to their proper format.
-#' @param lastResponseId Export all responses received after the specified response
-#' @param startDate Date range filter to only exports responses recorded after the specified date. Accepts dates as character strings in format "YYYY-MM-DD"
-#' @param endDate Date range filter to only exports responses recorded before the specified date. Accepts dates as character strings in format "YYYY-MM-DD"
-#' @param save_dir Directory where survey results will be stored. Defaults to a temporary directory which is cleaned when your R session is terminated. This parameter is useful if you'd like to store survey results. The downloaded survey will be stored as an RDS file (see \link[base]{readRDS}).
-#' @param force_request getSurvey() saves each survey in a temporary directory so that it can quickly be retrieved later. If force_request is TRUE, getSurvey() always downloads the survey from the API instead of loading it from the temporary directory.
-#' @param verbose Print verbose messages to the R console? Defaults to FALSE
+#' @param surveyID String. Unique ID for the survey you want to download. Returned as 'id' by the \link[qualtRics]{getSurveys} function.
+#' @param lastResponseId String. Export all responses received after the specified response. Defaults to NULL.
+#' @param startDate String. Filter to only exports responses recorded after the specified date. Accepts dates as character strings in format "YYYY-MM-DD". Defaults to NULL.
+#' @param endDate String. Filter to only exports responses recorded before the specified date. Accepts dates as character strings in format "YYYY-MM-DD". Defaults to NULL.
+#' @param seenUnansweredRecode String. Recode seen but unanswered questions with a string value. Defaults to NULL.
+#' @param limit Integer. Maximum number of responses exported. Defaults to NULL (all responses).
+#' @param includedQuestionIds Vector of strings (e.g. c('QID1', 'QID2', 'QID3'). Export only specified questions. Defaults to NULL.
+#' @param save_dir String. Directory where survey results will be stored. Defaults to a temporary directory which is cleaned when your R session is terminated. This parameter is useful if you'd like to store survey results. The downloaded survey will be stored as an RDS file (see \link[base]{readRDS}).
+#' @param force_request Logical. getSurvey() saves each survey in a temporary directory so that it can quickly be retrieved later. If force_request is TRUE, getSurvey() always downloads the survey from the API instead of loading it from the temporary directory. Defaults to FALSE.
+#' @param ... optional arguments. See \code{\link{registerOptions}} for arguments.
 #'
 #' @seealso See \url{https://api.qualtrics.com/docs/csv} for documentation on the Qualtrics API.
 #' @author Jasper Ginn
@@ -41,43 +41,90 @@
 #' @export
 #' @examples
 #' \dontrun{
-#' registerApiKey("<YOUR-QUALTRICS-API-KEY>")
-#' surveys <- getSurveys("https://leidenuniv.eu.qualtrics.com")
-#'                       # URL is for my own institution.
-#'                       # Substitute with your own institution's url
-#' mysurvey <- getSurvey(surveys$id[6],
+#' # Register your Qualtrics credentials if you haven't already
+#' registerOptions(api_token="<YOUR-API-TOKEN>", root_url="<YOUR-ROOT-URL>")
+#' # Retrieve a list of surveys
+#' surveys <- getSurveys()
+#' # Retrieve a single survey
+#' mysurvey <- getSurvey(surveyID = surveys$id[6],
 #'                       save_dir = tempdir(),
-#'                       "https://leidenuniv.eu.qualtrics.com",
+#'                       verbose=TRUE)
+#' # You can use the same parameters as those found in the qualtrics API documentation
+#' # Found here: https://api.qualtrics.com/docs/csv
+#' mysurvey <- getSurvey(surveyID = surveys$id[6],
+#'                       save_dir = tempdir(),
+#'                       startDate = "2017-01-01",
+#'                       endDate = "2017-01-31",
+#'                       limit = 100,
+#'                       useLabels = TRUE,
+#'                       seenUnansweredRecode = "UNANS",
+#'                       verbose=TRUE)
+#' # You can also choose to only download an export with specific questions using
+#' # the \code{\link[getSurveyQuestions]{getSurveyQuestions}} function.
+#'
+#' # Retrieve questions for a survey
+#' questions <- getSurveyQuestions(surveyID = surveys$id[6])
+#' # Retrieve a single survey, filtering for questions I want.
+#' mysurvey <- getSurvey(surveyID = surveys$id[6],
+#'                       save_dir = tempdir(),
+#'                       includedQuestionIds = c("QID1", "QID2", "QID3"),
 #'                       verbose=TRUE)
 #' }
 
 getSurvey <- function(surveyID,
-                      root_url,
-                      useLabels=TRUE,
-                      convertStandardColumns = TRUE,
                       lastResponseId=NULL,
                       startDate=NULL,
                       endDate=NULL,
+                      seenUnansweredRecode=NULL,
+                      limit = NULL,
+                      includedQuestionIds = NULL,
                       save_dir=NULL,
                       force_request=FALSE,
-                      verbose=FALSE) {
+                      ...) {
+  # Options
+  opts <- list(...)
+  verbose <- ifelse("verbose" %in% names(opts), opts$verbose,
+                    getOption("QUALTRICS_VERBOSE"))
+  convertStandardColumns <- ifelse("convertStandardColumns" %in% names(opts),
+                                   opts$convertStandardColumns,
+                                   getOption("QUALTRICS_CONVERTSTANDARDCOLUMNS"))
+  useLocalTime <- ifelse("useLocalTime" %in% names(opts), opts$useLocalTime,
+                         getOption("QUALTRICS_USELOCALTIME"))
+  useLabels <- ifelse("useLabels" %in% names(opts), opts$useLabels,
+                      getOption("QUALTRICS_USELABELS"))
   # Check params
-  checkParams(save_dir, check_qualtrics_api_key = TRUE)
+  checkParams(verbose=verbose,
+              convertStandardColumns=convertStandardColumns,
+              useLocalTime=useLocalTime,
+              useLabels=useLabels,
+              lastResponseId=lastResponseId,
+              startDate=startDate,
+              endDate=endDate,
+              includedQuestionIds=includedQuestionIds,
+              save_dir=save_dir,
+              seenUnansweredRecode=seenUnansweredRecode,
+              limit=limit)
   # See if survey already in tempdir
   if(!force_request) {
-    if(paste0(surveyID, ".rds") %in% tempdir()) {
+    if(paste0(surveyID, ".rds") %in% list.files(tempdir())) {
       data <- readRDS(paste0(tempdir(), "/", surveyID, ".rds"))
+      if(verbose) message(paste0("Found an earlier download for survey with id ", surveyID,
+                                 ". Loading this file. Set 'force_request' to TRUE if you want to override this."))
       return(data)
     }
   }
   # add endpoint to root url
-  root_url <- appendRootUrl(root_url, "responseexports")
+  root_url <- appendRootUrl(Sys.getenv("QUALTRICS_ROOT_URL"), "responseexports")
   # Create raw JSON payload
-  raw_payload <- createRawPayload(surveyID,
-                                  useLabels,
-                                  lastResponseId,
-                                  startDate,
-                                  endDate)
+  raw_payload <- createRawPayload(surveyID = surveyID,
+                                  useLabels = useLabels,
+                                  lastResponseId = lastResponseId,
+                                  startDate = startDate,
+                                  endDate = endDate,
+                                  seenUnansweredRecode = seenUnansweredRecode,
+                                  limit = limit,
+                                  useLocalTime = useLocalTime,
+                                  includedQuestionIds = includedQuestionIds)
   # POST request for download
   res <- qualtricsApiRequest("POST", url=root_url, body = raw_payload)
   # Get id
