@@ -4,7 +4,8 @@
 \alias{readSurvey}
 \title{Read comma separated csv file from Qualtrics.}
 \usage{
-readSurvey(file_name, convertStandardColumns = TRUE, stripHTML = TRUE)
+readSurvey(file_name, convertStandardColumns = TRUE, stripHTML = TRUE,
+  fileEncoding = "", legacyFormat = FALSE)
 }
 \arguments{
 \item{file_name}{String. A csv data file.}
@@ -12,6 +13,10 @@ readSurvey(file_name, convertStandardColumns = TRUE, stripHTML = TRUE)
 \item{convertStandardColumns}{Logical. If TRUE, then the function will convert general data columns (first name, last name, lat, lon, ip address, startdate, enddate etc.) to their proper format. defaults to TRUE.}
 
 \item{stripHTML}{Logical. If TRUE, then remove html tags. Defaults to TRUE}
+
+\item{fileEncoding}{Set this argument to import your survey using a specific encoding. (see \code{\link{utils}{read.csv}} and the 'Encoding' section in \code{\link{base}{file}})}
+
+\item{legacyFormat}{Logical. If TRUE, then import "legacy" format csv files (as of 2017). This option also sets fileEncoding to UTF-8-BOM if not specified otherwise. Defaults to FALSE}
 }
 \value{
 A data frame. Variable labels are stored as attributes. They are not printed on

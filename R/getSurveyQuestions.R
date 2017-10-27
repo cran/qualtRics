@@ -19,7 +19,7 @@
 #' @param surveyID String. Unique ID for the survey you want to download. Returned as 'id' by the \link[qualtRics]{getSurveys} function.
 #'
 #' @seealso See \url{https://api.qualtrics.com/docs} for documentation on the Qualtrics API.
-#' @author Jasper Ginn
+#' @author Jasper Ginn, Phoebe Wong
 #' @importFrom httr GET
 #' @importFrom httr content
 #' @importFrom httr add_headers
@@ -52,12 +52,20 @@ getSurveyQuestions <- function(surveyID) {
   resp <- qualtricsApiRequest("GET", root_url)
   # Get question information and map
   qi <- resp$result$questions
-  # Add questions
-  quest <- data.frame(
-    "qid" = names(qi),
-    "question" = sapply(qi, function(x) x$questionText),
-    stringsAsFactors = FALSE
-  )
+  # Add questions, question labels and force response info
+  qlabel <- unlist(sapply(qi, function(x) as.character(x$questionLabel))) #question label
+  
+  quest <- data.frame(qid = names(qi), 
+                      question = sapply(qi,function(x) x$questionText), 
+                      force_resp = sapply(qi, function(x) x$validation$doesForceResponse), 
+                      stringsAsFactors = FALSE)
+  
+  if (length(qlabel) == 0){
+    quest$qlabel <- rep(NA, nrow(quest))
+  } else {
+    quest$qlabel <- sapply(qi, function(x) as.character(x$questionLabel))
+  }
+  
   # Row names
   row.names(quest) <- 1:nrow(quest)
   # Return
