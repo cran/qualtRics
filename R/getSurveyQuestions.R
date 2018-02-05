@@ -1,5 +1,5 @@
 #   Download qualtrics data into R
-#    Copyright (C) 2017 Jasper Ginn
+#    Copyright (C) 2018 Jasper Ginn
 
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,9 +20,7 @@
 #'
 #' @seealso See \url{https://api.qualtrics.com/docs} for documentation on the Qualtrics API.
 #' @author Jasper Ginn, Phoebe Wong
-#' @importFrom httr GET
-#' @importFrom httr content
-#' @importFrom httr add_headers
+#' @importFrom dplyr as_tibble
 #' @export
 #' @examples
 #' \dontrun{
@@ -52,22 +50,17 @@ getSurveyQuestions <- function(surveyID) {
   resp <- qualtricsApiRequest("GET", root_url)
   # Get question information and map
   qi <- resp$result$questions
-  # Add questions, question labels and force response info
-  qlabel <- unlist(sapply(qi, function(x) as.character(x$questionLabel))) #question label
-  
-  quest <- data.frame(qid = names(qi), 
-                      question = sapply(qi,function(x) x$questionText), 
-                      force_resp = sapply(qi, function(x) x$validation$doesForceResponse), 
+  # Add questions, question labels, question names and force response info
+  quest <- data.frame(qid = names(qi),
+                      qnames = vapply(qi, function(x) x$questionName, ""),
+                      question = vapply(qi,function(x) x$questionText, ""),
+                      force_resp = vapply(qi,
+                                          function(x) x$validation$doesForceResponse, # nolint
+                                          TRUE),
                       stringsAsFactors = FALSE)
-  
-  if (length(qlabel) == 0){
-    quest$qlabel <- rep(NA, nrow(quest))
-  } else {
-    quest$qlabel <- sapply(qi, function(x) as.character(x$questionLabel))
-  }
-  
+
   # Row names
-  row.names(quest) <- 1:nrow(quest)
+  row.names(quest) <- seq_len(nrow(quest))
   # Return
-  return(quest)
+  return(dplyr::as_tibble(quest))
 }

@@ -1,5 +1,5 @@
 #   Download qualtrics data into R
-#    Copyright (C) 2017 Jasper Ginn
+#    Copyright (C) 2018 Jasper Ginn
 
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -31,13 +31,6 @@
 #'
 #' @seealso See \url{https://api.qualtrics.com/docs/csv} for documentation on the Qualtrics API.
 #' @author Jasper Ginn
-#' @importFrom httr GET
-#' @importFrom httr POST
-#' @importFrom httr content
-#' @importFrom stringr str_sub
-#' @importFrom utils read.csv
-#' @importFrom utils unzip
-#' @importFrom utils write.csv
 #' @export
 #' @examples
 #' \dontrun{
@@ -85,9 +78,9 @@ getSurvey <- function(surveyID,
   opts <- list(...)
   verbose <- ifelse("verbose" %in% names(opts), opts$verbose,
                     getOption("QUALTRICS_VERBOSE"))
-  convertStandardColumns <- ifelse("convertStandardColumns" %in% names(opts),
-                                   opts$convertStandardColumns,
-                                   getOption("QUALTRICS_CONVERTSTANDARDCOLUMNS"))
+  convertVariables <- ifelse("convertVariables" %in% names(opts),
+                                   opts$convertVariables,
+                                   getOption("QUALTRICS_CONVERTVARIABLES"))
   useLocalTime <- ifelse("useLocalTime" %in% names(opts), opts$useLocalTime,
                          getOption("QUALTRICS_USELOCALTIME"))
   useLabels <- ifelse("useLabels" %in% names(opts), opts$useLabels,
@@ -97,7 +90,7 @@ getSurvey <- function(surveyID,
 
   # Check params
   checkParams(verbose=verbose,
-              convertStandardColumns=convertStandardColumns,
+              convertVariables=convertVariables,
               useLocalTime=useLocalTime,
               useLabels=useLabels,
               lastResponseId=lastResponseId,
@@ -111,8 +104,8 @@ getSurvey <- function(surveyID,
   if(!force_request) {
     if(paste0(surveyID, ".rds") %in% list.files(tempdir())) {
       data <- readRDS(paste0(tempdir(), "/", surveyID, ".rds"))
-      if(verbose) message(paste0("Found an earlier download for survey with id ", surveyID,
-                                 ". Loading this file. Set 'force_request' to TRUE if you want to override this."))
+      if(verbose) message(paste0("Found an earlier download for survey with id ", surveyID, # nolint
+                                 ". Loading this file. Set 'force_request' to TRUE if you want to override this.")) # nolint
       return(data)
     }
   }
@@ -145,8 +138,13 @@ getSurvey <- function(surveyID,
   # Download, unzip and return file path
   survey.fpath <- downloadQualtricsExport(check_url, verbose = verbose)
   # Read data
-  data <- readSurvey(survey.fpath, convertStandardColumns = convertStandardColumns, fileEncoding = fileEncoding)
-  # Save survey as RDS file in temp folder so that it can be easily retrieved this session.
+  data <- readSurvey(survey.fpath)
+  # Add types
+  if(convertVariables) {
+    data <- inferDataTypes(data, surveyID)
+  }
+  # Save survey as RDS file in temp folder so that it can be easily
+  # retrieved this session.
   saveRDS(data, paste0(tempdir(), "/", surveyID, ".rds"))
   # Remove tmpfiles
   if(!is.null(save_dir)) {
