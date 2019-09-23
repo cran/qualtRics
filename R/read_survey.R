@@ -20,11 +20,13 @@ readSurvey <- function(...) {
 #' Variable labels are stored as attributes.
 #'
 #' @param file_name String. A CSV data file.
-#' @param strip_html Logical. If TRUE, then remove HTML tags. Defaults to TRUE.
-#' @param legacy Logical. If TRUE, then import "legacy" format CSV files
-#' (as of 2017). Defaults to FALSE.
+#' @param import_id Logical. If \code{TRUE}, use Qualtrics import IDs instead of
+#' question IDs as column names. Defaults to \code{FALSE}.
+#' @param strip_html Logical. If \code{TRUE}, then remove HTML tags. Defaults
+#' to \code{TRUE}.
+#' @param legacy Logical. If \code{TRUE}, then import "legacy" format CSV files
+#' (as of 2017). Defaults to \code{FALSE}.
 #'
-#' @importFrom utils read.csv
 #' @importFrom sjlabelled set_label
 #' @importFrom jsonlite fromJSON
 #' @importFrom stringr str_match
@@ -48,9 +50,15 @@ readSurvey <- function(...) {
 #'
 read_survey <- function(file_name,
                         strip_html = TRUE,
+                        import_id = FALSE,
                         legacy = FALSE) {
 
   # START UP: CHECK ARGUMENTS PASSED BY USER ----
+
+  if (import_id & legacy) {
+    stop("Import IDs as column names are not supported for legacy CSVs.\nSet import_id = FALSE.",
+         call. = FALSE)
+  }
 
   # check if file exists
   assert_surveyFile_exists(file_name)
@@ -63,19 +71,21 @@ read_survey <- function(file_name,
   rawdata <- suppressMessages(readr::read_csv(
     file = file_name,
     col_names = FALSE,
+    col_types = readr::cols(.default = readr::col_character()),
     skip = skipNr,
     na = c("")
   ))
   # Need contingency when 0 rows
   assertthat::assert_that(nrow(rawdata) > 0,
-    msg = "The survey you are trying to import has no responses."
+                          msg = "The survey you are trying to import has no responses."
   ) # nolint
   # Load headers
-  header <- suppressMessages(readr::read_csv(
+  header <- suppressWarnings(suppressMessages(readr::read_csv(
     file = file_name,
     col_names = TRUE,
+    col_types = readr::cols(.default = readr::col_character()),
     n_max = 1
-  ))
+  )))
 
   # MANIPULATE DATA ----
 
@@ -85,6 +95,19 @@ read_survey <- function(file_name,
   # header <- as.data.frame(header)
   # Add names
   names(rawdata) <- names(header)
+
+  if (import_id) {
+    new_ids <- suppressMessages(readr::read_csv(
+      file = file_name,
+      col_names = FALSE,
+      col_types = readr::cols(.default = readr::col_character()),
+      skip = skipNr - 1,
+      n_max = 1
+    ))
+
+    names(rawdata) <- gsub("^\\{'ImportId': '(.*)'\\}$", "\\1",
+                           unlist(new_ids))
+  }
 
   # If Qualtrics adds an empty column at the end, remove it
   if (grepl(",$", readLines(file_name, n = 1))) {
@@ -112,6 +135,8 @@ read_survey <- function(file_name,
 
   # Remaining NAs default to 'empty string'
   subquestions[is.na(subquestions)] <- ""
+
+  rawdata <- readr::type_convert(rawdata)
 
   # Add labels to data
   rawdata <- sjlabelled::set_label(rawdata, unlist(subquestions))

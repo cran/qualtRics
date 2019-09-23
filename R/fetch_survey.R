@@ -48,6 +48,8 @@ getSurvey <- function(...) {
 #' @param convert Logical. If \code{TRUE}, then the
 #' \code{\link[qualtRics]{fetch_survey}} function will convert certain question
 #' types (e.g. multiple choice) to proper data type in R. Defaults to \code{TRUE}.
+#' @param import_id Logical. If \code{TRUE}, use Qualtrics import IDs instead of
+#' question IDs as column names. Defaults to \code{FALSE}.
 #' @param local_time Logical. Use local timezone to determine response date
 #' values? Defaults to \code{FALSE}. See
 #' \url{https://api.qualtrics.com/docs/dates-and-times} for more information.
@@ -96,39 +98,9 @@ fetch_survey <- function(surveyID,
                          verbose = TRUE,
                          label = TRUE,
                          convert = TRUE,
+                         import_id = FALSE,
                          local_time = FALSE,
                          ...) {
-
-  # OPTIONS AND CHECK PARAMETERS ----
-
-  opts <- list(...)
-  # Get all arguments passed
-  calls <- names(vapply(match.call(), deparse, "character"))[-1]
-
-  # Options
-
-  parse_opts <- function(flag, option_flag) {
-    ifelse(!is.null(getOption(option_flag)),
-      getOption(option_flag),
-      flag
-    )
-  }
-
-  verbose <- parse_opts(verbose, "QUALTRICS_VERBOSE")
-  convert <- parse_opts(
-    convert,
-    "QUALTRICS_CONVERTVARIABLES"
-  )
-  local_time <- parse_opts(
-    local_time,
-    "QUALTRICS_USELOCALTIME"
-  )
-  label <- parse_opts(
-    label,
-    "QUALTRICS_USELABELS"
-  )
-
-  # Check params
 
   ## Are the API credentials stored?
   assert_base_url()
@@ -137,6 +109,7 @@ fetch_survey <- function(surveyID,
   check_params(
     verbose = verbose,
     convert = convert,
+    import_id = import_id,
     local_time = local_time,
     label = label,
     last_response = last_response,
@@ -201,9 +174,10 @@ fetch_survey <- function(surveyID,
   # READ DATA AND SET VARIABLES ----
 
   # Read data
-  data <- read_survey(survey.fpath)
+  data <- read_survey(survey.fpath, import_id = import_id)
+
   # Add types
-  if (convert) {
+  if (convert & label) {
     data <- infer_data_types(data, surveyID)
   }
   # Save survey as RDS file in temp folder so that it can be easily
