@@ -1,19 +1,5 @@
 #' Download a survey and import it into R
 #'
-#' This function is soft deprecated; use \code{\link[qualtRics]{fetch_survey}}
-#' instead.
-#' @param ... All arguments for \code{fetch_survey}
-#'
-#' @export
-getSurvey <- function(...) {
-  warning("Soon, `getSurvey` will be deprecated. Try using `fetch_survey()` instead.")
-  fetch_survey(...)
-}
-
-
-
-#' Download a survey and import it into R
-#'
 #' Download a Qualtrics survey you own via API and import the survey directly into R.
 #'
 #' @param surveyID String. Unique ID for the survey you want to download.
@@ -26,8 +12,13 @@ getSurvey <- function(...) {
 #' @param end_date String. Filter to only exports responses recorded before the
 #' specified date. Accepts dates as character strings in format "YYYY-MM-DD".
 #' Defaults to \code{NULL}.
-#' @param unanswer_recode String. Recode seen but unanswered questions with a
-#' string value. Defaults to \code{NULL}.
+#' @param unanswer_recode Integer. Recode seen but unanswered questions with an
+#' integer-like value, such as 999. Defaults to \code{NULL}.
+#' @param unanswer_recode_multi Integer. Recode seen but unanswered multi-select
+#' questions with an integer-like value, such as 999. Defaults to value for
+#' \code{unaswer_recode}.
+#' @param include_display_order Display order information (such as for
+#' surveys with randomization).
 #' @param limit Integer. Maximum number of responses exported. Defaults to
 #' \code{NULL} (all responses).
 #' @param include_questions Vector of strings (e.g. c('QID1', 'QID2', 'QID3').
@@ -50,15 +41,20 @@ getSurvey <- function(...) {
 #' types (e.g. multiple choice) to proper data type in R. Defaults to \code{TRUE}.
 #' @param import_id Logical. If \code{TRUE}, use Qualtrics import IDs instead of
 #' question IDs as column names. Defaults to \code{FALSE}.
-#' @param local_time Logical. Use local timezone to determine response date
-#' values? Defaults to \code{FALSE}. See
-#' \url{https://api.qualtrics.com/docs/dates-and-times} for more information.
-#' @param ... optional arguments. You can pass all arguments listed in
-#' \code{\link{registerOptions}} (except a different base url / api key).
-#' You can also pass a argument 'fileEncoding' (see 'fileEncoding' argument in
-#' \code{\link[qualtRics]{read_survey}}) to import your survey using a specific encoding.
+#' @param time_zone String. A local timezone to determine response date
+#' values. Defaults to \code{NULL} which corresponds to UTC time. See
+#' \url{https://api.qualtrics.com/docs/time-zones} for more information on
+#' format.
+#' @param breakout_sets Logical. If \code{TRUE}, then the
+#' \code{\link[qualtRics]{fetch_survey}} function will split multiple
+#' choice question answers into columns. If \code{FALSE}, each multiple choice
+#' question is one column. Defaults to \code{TRUE}.
+#' @param ... Optional arguments, such as a `fileEncoding` (see `fileEncoding`
+#' argument in \code{\link[qualtRics]{read_survey}}) to import your survey using
+#' a specific encoding.
 #'
-#' @seealso See \url{https://api.qualtrics.com/docs/response-exports} for documentation on the Qualtrics API.
+#' @seealso See \url{https://api.qualtrics.com/reference} for documentation on
+#' the Qualtrics API.
 #' @export
 #' @examples
 #' \dontrun{
@@ -81,7 +77,7 @@ getSurvey <- function(...) {
 #'   end_date = "2018-01-31",
 #'   limit = 100,
 #'   label = TRUE,
-#'   unanswer_recode = "UNANS",
+#'   unanswer_recode = 999,
 #'   verbose = TRUE
 #' )
 #' }
@@ -91,6 +87,8 @@ fetch_survey <- function(surveyID,
                          start_date = NULL,
                          end_date = NULL,
                          unanswer_recode = NULL,
+                         unanswer_recode_multi = unanswer_recode,
+                         include_display_order = TRUE,
                          limit = NULL,
                          include_questions = NULL,
                          save_dir = NULL,
@@ -99,7 +97,8 @@ fetch_survey <- function(surveyID,
                          label = TRUE,
                          convert = TRUE,
                          import_id = FALSE,
-                         local_time = FALSE,
+                         time_zone = NULL,
+                         breakout_sets = TRUE,
                          ...) {
 
   ## Are the API credentials stored?
@@ -110,7 +109,7 @@ fetch_survey <- function(surveyID,
     verbose = verbose,
     convert = convert,
     import_id = import_id,
-    local_time = local_time,
+    time_zone = time_zone,
     label = label,
     last_response = last_response,
     start_date = start_date,
@@ -118,7 +117,10 @@ fetch_survey <- function(surveyID,
     include_questions = include_questions,
     save_dir = save_dir,
     unanswer_recode = unanswer_recode,
-    limit = limit
+    unanswer_recode_multi = unanswer_recode_multi,
+    include_display_order = include_display_order,
+    limit = limit,
+    breakout_sets = breakout_sets
   )
 
   # See if survey already in tempdir
@@ -137,44 +139,41 @@ fetch_survey <- function(surveyID,
 
   # CONSTRUCT API CALL ----
 
-  # add endpoint to root url
-  root_url <- append_root_url(Sys.getenv("QUALTRICS_BASE_URL"), "responseexports")
+  # fetch URL:
+  fetch_url <- create_fetch_url(Sys.getenv("QUALTRICS_BASE_URL"), surveyID)
+
   # Create raw JSON payload
   raw_payload <- create_raw_payload(
-    surveyID = surveyID,
     label = label,
-    last_response = last_response,
     start_date = start_date,
     end_date = end_date,
     unanswer_recode = unanswer_recode,
+    unanswer_recode_multi = unanswer_recode_multi,
+    include_display_order = include_display_order,
     limit = limit,
-    local_time = local_time,
-    include_questions = include_questions
+    time_zone = time_zone,
+    include_questions = include_questions,
+    breakout_sets = breakout_sets
   )
 
   # SEND POST REQUEST TO API ----
 
   # POST request for download
-  res <- qualtrics_api_request("POST", url = root_url, body = raw_payload)
+  res <- qualtrics_api_request("POST", url = fetch_url, body = raw_payload)
   # Get id
-  if (is.null(res$result$id)) {
-    if (is.null(res$content[[1]]$id)) {
+  if (is.null(res$result$progressId)) {
       stop("Something went wrong. Please re-run your query.")
     } else {
-      ID <- res$content[[1]]$id
-    }
-  } else {
-    ID <- res$result$id
+    requestID <- res$result$progressId
   } # NOTE This is not fail safe because ID can still be NULL
-  # This is the url to use when checking the ID
-  check_url <- paste0(root_url, ID)
+
   # Download, unzip and return file path
-  survey.fpath <- download_qualtrics_export(check_url, verbose = verbose)
+  survey.fpath <- download_qualtrics_export(fetch_url, requestID, verbose = verbose)
 
   # READ DATA AND SET VARIABLES ----
 
   # Read data
-  data <- read_survey(survey.fpath, import_id = import_id)
+  data <- read_survey(survey.fpath, import_id = import_id, time_zone = time_zone)
 
   # Add types
   if (convert & label) {
