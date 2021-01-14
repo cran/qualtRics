@@ -63,9 +63,7 @@ qualtrics_response_codes <- function(res, raw = FALSE) {
 
 #' Construct a header to send to Qualtrics API
 #'
-#' @param API_TOKEN API token. Available in your Qualtrics account (see: \url{https://api.qualtrics.com/docs/authentication})
-#'
-#' @seealso See \url{https://api.qualtrics.com/docs/root-url} for documentation on the Qualtrics API.
+#' @param API_TOKEN API token. Available in your Qualtrics account (see: \url{https://api.qualtrics.com/docs/})
 
 construct_header <- function(API_TOKEN) {
   # Construct and return
@@ -113,7 +111,10 @@ check_params <- function(...) {
       args$convert,
       args$import_id,
       args$label,
-      args$include_display_order
+      args$include_display_order,
+      args$breakout_sets,
+      args$add_column_map,
+      args$add_var_labels
     )
   }
 
@@ -166,7 +167,7 @@ check_params <- function(...) {
 #' Append to listed server to create root URL
 #'
 #' @param base_url Base URL for your institution (see
-#' \url{https://api.qualtrics.com/docs/root-url}
+#' \url{https://api.qualtrics.com/docs/}
 #'
 #' @return Root URL
 
@@ -237,6 +238,16 @@ create_mailinglist_url <- function(base_url, mailinglistID){
   return(mailinglist_url)
 }
 
+create_distributions_url <- function(base_url, surveyID){
+  # create url
+  distributions_url <-
+    paste0(
+      create_root_url(base_url),
+      "distributions?surveyId=", surveyID
+    )
+  return(distributions_url)
+}
+
 #' Create raw JSON payload to post response exports request
 #'
 #' @param label Flag
@@ -298,12 +309,21 @@ create_raw_payload <- function(label = TRUE,
   # Add in format param:
   params$format <- "csv"
 
+  # Unbox
+  params_ub <- map(params, function(x){
+    if(length(x) == 1) jsonlite::unbox(x) else x
+    }
+  )
+
+  # But "questionIds" needs to be boxed
+  params_ub["questionIds"] <- params["questionIds"]
+
   # Drop any NULL elements:
-  params <- purrr::discard(params, ~is.null(.x))
+  params_ub <- purrr::discard(params_ub, ~ is.null(.x))
 
   # convert to JSON:
-  jsonlite::toJSON(params, auto_unbox = TRUE)
-  
+  jsonlite::toJSON(params_ub, auto_unbox = FALSE)
+
 }
 
 
