@@ -8,7 +8,7 @@ survey_questions(surveyID)
 }
 \arguments{
 \item{surveyID}{A string. Unique ID for the survey you want to download.
-Returned as `id` by the \link[qualtRics]{all_surveys} function.}
+Returned as \code{id} by the \link[qualtRics]{all_surveys} function.}
 }
 \description{
 Retrieve a data frame containing question IDs and labels
@@ -38,6 +38,6 @@ mysurvey <- fetch_survey(
 
 }
 \seealso{
-See \url{https://api.qualtrics.com/docs/} for documentation on the
+See \url{https://api.qualtrics.com/} for documentation on the
 Qualtrics API.
 }

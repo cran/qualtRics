@@ -85,7 +85,7 @@ used. Defaults to \code{FALSE}.}
 
 \item{time_zone}{String. A local timezone to determine response date
 values. Defaults to \code{NULL} which corresponds to UTC time. See
-\url{https://api-test.qualtrics.com/docs/publicapidocs/docs/Instructions/dates-and-times.md}
+\href{https://api.qualtrics.com/instructions/}{"Dates and Times"} from Qualtrics
 for more information on format.}
 
 \item{breakout_sets}{Logical. If \code{TRUE}, then the
@@ -110,7 +110,7 @@ column types that may be incorrectly guessed. Takes a \code{\link[readr]{cols}}
 specification. See example below and \code{\link[readr]{cols}} for formatting
 details. Defaults to \code{NULL}. Overwritten by \code{convert = TRUE}.}
 
-\item{...}{Optional arguments, such as a `fileEncoding` (see `fileEncoding`
+\item{...}{Optional arguments, such as a \code{fileEncoding} (see \code{fileEncoding}
 argument in \code{\link[qualtRics]{read_survey}}) to import your survey using
 a specific encoding.}
 }
@@ -148,6 +148,6 @@ mysurvey <- fetch_survey(
 
 }
 \seealso{
-See \url{https://api.qualtrics.com/reference/} for documentation on
+See \url{https://api.qualtrics.com/} for documentation on
 the Qualtrics API.
 }

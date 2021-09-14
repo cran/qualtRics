@@ -12,7 +12,7 @@
 
 <meta name="author" content="Julia Silge and Jasper Ginn" />
 
-<meta name="date" content="2021-01-13" />
+<meta name="date" content="2021-09-14" />
 
 <title>Introduction to qualtRics</title>
 
@@ -40,6 +40,7 @@
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
@@ -140,7 +141,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <h1 class="title toc-ignore">Introduction to qualtRics</h1>
 <h4 class="author">Julia Silge and Jasper Ginn</h4>
-<h4 class="date">2021-01-13</h4>
+<h4 class="date">2021-09-14</h4>
 
 
 
@@ -189,7 +190,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">start_date =</span> <span class="st">&quot;2018-10-01&quot;</span>,</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">end_date =</span> <span class="st">&quot;2018-10-31&quot;</span>,</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">label =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
-<p>Note that your date and time settings may not correspond to your own timezone. You can find out how to do this <a href="https://www.qualtrics.com/support/survey-platform/managing-your-account/research-core-account-settings/#user-settings">here</a>. See <a href="https://api-test.qualtrics.com/docs/publicapidocs/docs/Instructions/dates-and-times.md">this page</a> for more information about how Qualtrics handles dates and times. <strong>Keep in mind that this is important if you plan on using times / dates as cut-off points to filter data</strong>.</p>
+<p>Note that your date and time settings may not correspond to your own timezone. You can find out how to do this <a href="https://www.qualtrics.com/support/survey-platform/managing-your-account/research-core-account-settings/#user-settings">here</a>. See <a href="https://api.qualtrics.com/instructions/">“Dates and Times”</a> for more information about how Qualtrics handles dates and times. <strong>Keep in mind that this is important if you plan on using times / dates as cut-off points to filter data</strong>.</p>
 <p>You may also reference a response ID; <code>fetch_survey()</code> will then download all responses that were submitted after that response:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>mysurvey <span class="ot">&lt;-</span> <span class="fu">fetch_survey</span>(surveys<span class="sc">$</span>id[<span class="dv">4</span>],</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">last_response =</span> <span class="st">&quot;R_3mmovCIeMllvsER&quot;</span>,</span>

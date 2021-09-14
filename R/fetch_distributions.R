@@ -25,8 +25,8 @@ fetch_distributions <- function(surveyID){
   assert_base_url()
   assert_api_key()
 
-  fetch_url <- create_distributions_url(base_url = Sys.getenv("QUALTRICS_BASE_URL"),
-                                        surveyID =surveyID)
+  fetch_url <- generate_url(query = "fetchdistributions",
+                            surveyID = surveyID)
 
   elements <- list()
 
@@ -37,8 +37,6 @@ fetch_distributions <- function(surveyID){
     fetch_url <- res$result$nextPage
 
   }
-
-  elements <- res$result$elements
 
   headers <- purrr::map(elements, "headers", .default = NA_character_)
   subjectMessage <- purrr::map(headers, "subjectMessage", .default = NA_character_)

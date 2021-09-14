@@ -12,7 +12,7 @@
 #' to \code{TRUE}.
 #' @param time_zone String. A local timezone to determine response date
 #' values. Defaults to \code{NULL} which corresponds to UTC time. See
-#' \url{https://api-test.qualtrics.com/docs/publicapidocs/docs/Instructions/dates-and-times.md}
+#' ["Dates and Times"](https://api.qualtrics.com/instructions/) from Qualtrics
 #' for more information on format.
 #' @param legacy Logical. If \code{TRUE}, then import "legacy" format CSV files
 #' (as of 2017). Defaults to \code{FALSE}.
@@ -84,7 +84,9 @@ read_survey <- function(file_name,
 
   # Ignore import_id if legacy = TRUE
   if (import_id & legacy) {
-    warning("Using import IDs as column names are not supported for legacy response files. Defaulting to user-defined variable names; set import_id = FALSE in future.")
+    rlang::warn(c("Using import IDs as column names is not supported for legacy response files.",
+                  "Defaulting to user-defined variable names",
+                  "Set import_id = FALSE in future."))
     import_id = FALSE
   }
 

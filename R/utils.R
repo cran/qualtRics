@@ -19,15 +19,15 @@ qualtrics_response_codes <- function(res, raw = FALSE) {
       "OK" = TRUE
     ))
   } else if (res$status_code == 401) {
-    stop("Qualtrics API raised an authentication (401) error - you may not have the\nrequired authorization. Please check your API key and root url.") # nolint
+    rlang::abort("Qualtrics API raised an authentication (401) error - you may not have the\nrequired authorization. Please check your API key and root url.") # nolint
   } else if (res$status_code == 403) {
-    stop("Qualtrics API raised an forbidden (403) error - you may have a valid API\nkey that lacks permissions to query the API. Please check your settings and/or talk to your administrators.") # nolint
+    rlang::abort("Qualtrics API raised an forbidden (403) error - you may have a valid API\nkey that lacks permissions to query the API. Please check your settings and/or talk to your administrators.") # nolint
   } else if (res$status_code == 400) {
-    stop("Qualtrics API raised a bad request (400) error - Please report this on\nhttps://github.com/ropensci/qualtRics/issues") # nolint
+    rlang::abort("Qualtrics API raised a bad request (400) error - Please report this on\nhttps://github.com/ropensci/qualtRics/issues") # nolint
   } else if (res$status_code == 404) {
-    stop("Qualtrics API complains that the requested resource cannot be found (404 error).\nPlease check if you are using the correct survey ID.") # nolint
+    rlang::abort("Qualtrics API complains that the requested resource cannot be found (404 error).\nPlease check if you are using the correct survey ID.") # nolint
   } else if (res$status_code == 500) {
-    stop(paste0(
+    rlang::abort(paste0(
       "Qualtrics API reports an internal server (500) error. Please contact\nQualtrics Support (https://www.qualtrics.com/contact/) and provide the instanceId and errorCode below.", "\n", # nolint
       "\n",
       "instanceId:", " ",
@@ -41,7 +41,7 @@ qualtrics_response_codes <- function(res, raw = FALSE) {
       "OK" = FALSE
     ))
   } else if (res$status_code == 503) {
-    stop(paste0(
+    rlang::abort(paste0(
       "Qualtrics API reports a temporary internal server (500) error. Please\ncontact Qualtrics Support (https://www.qualtrics.com/contact/) with the instanceId and\nerrorCode below or retry your query.", "\n", # nolint
       "\n",
       "instanceId:", " ", httr::content(res)$meta$error$instanceId,
@@ -53,17 +53,17 @@ qualtrics_response_codes <- function(res, raw = FALSE) {
       "OK" = FALSE
     ))
   } else if (res$status_code == 413) {
-    stop("The request body was too large. This can also happen in cases where a\nmultipart/form-data request is malformed.") # nolint
+    rlang::abort("The request body was too large. This can also happen in cases where a\nmultipart/form-data request is malformed.") # nolint
   } else if (res$status_code == 429) {
-    stop("You have reached the concurrent request limit.")
+    rlang::abort("You have reached the concurrent request limit.")
   } else {
-    stop(paste0("Qualtrics API reports a ", res$status_code, " status code."))
+    rlang::abort(paste0("Qualtrics API reports a ", res$status_code, " status code."))
   }
 }
 
 #' Construct a header to send to Qualtrics API
 #'
-#' @param API_TOKEN API token. Available in your Qualtrics account (see: \url{https://api.qualtrics.com/docs/})
+#' @param API_TOKEN API token. Available in your Qualtrics account (see: \url{https://api.qualtrics.com/})
 
 construct_header <- function(API_TOKEN) {
   # Construct and return
@@ -104,7 +104,10 @@ check_params <- function(...) {
     "convert",
     "import_id",
     "label",
-    "include_display_order"
+    "include_display_order",
+    "breakout_sets",
+    "add_column_map",
+    "add_var_labels"
   ) %in% names(args))) {
     assert_options_logical(
       args$verbose,
@@ -119,8 +122,18 @@ check_params <- function(...) {
   }
 
   if (args$convert) {
-    assertthat::assert_that(args$label,
-                            msg = "To convert to factors, we need the Qualtrics labels.\nUse `label = TRUE` or `convert = FALSE`.")
+    assertthat::assert_that(
+      args$label,
+      msg = "To convert to factors, we need the Qualtrics labels.\nUse `label = TRUE` or `convert = FALSE`."
+    )
+  }
+
+  if (!args$label & !args$breakout_sets) {
+    rlang::warn(
+      c("Use caution with `breakout_sets = FALSE` plus `label = FALSE`",
+        "Results will likely be incorrectly guessed and read in as numeric",
+        "Use a `col_types` specification to override")
+    )
   }
 
   # Check if params are of the right type
@@ -164,88 +177,56 @@ check_params <- function(...) {
   }
 }
 
-#' Append to listed server to create root URL
+#' Generate URL for specific API query by type and (if appropriate) ID
 #'
-#' @param base_url Base URL for your institution (see
-#' \url{https://api.qualtrics.com/docs/}
+#' @param query string.  The specific API query desired.  Generally named the
+#'   same as associated functions but without underscores, so the request for
+#'   `fetch_survey()` would be be "fetchsurvey".
+#' @param ... Named elements of URL for specific query desired, such as
+#'   `surveyID` or `mailinglistID`
 #'
-#' @return Root URL
+#' @importFrom glue glue
+#'
+#' @return Endpoint URL to be passed to querying tools
+#' @keywords internal
+#' @export
+generate_url <- function(query, ...){
 
-create_root_url <- function(base_url){
-  # create root url
-  root_url <- paste0(
-    "https://",
-    base_url,
-    ifelse(substr(
-      base_url, nchar(base_url),
-      nchar(base_url)
-    ) == "/",
-    paste0("API/v3/"),
-    paste0("/API/v3/")
+  args <- list(...)
+  list2env(args, envir = environment())
+
+  # Get the user's specific base URL from environment:
+  base_url <- Sys.getenv("QUALTRICS_BASE_URL")
+
+  # make sure that the base_url ends w/o forward slash:
+  base_url <-
+    ifelse(
+      substring(base_url, nchar(base_url)) == "/",
+      substr(base_url, 1, nchar(base_url)-1),
+      base_url
     )
-  )
-  return(root_url)
-}
 
+  # Construct URL root for the v3 api endpoint:
+  root_url <- glue::glue("https://{base_url}/API/v3")
 
-create_surveys_url <- function(base_url) {
-  # create surveys url
-  surveys_url <-
-    paste0(
-      create_root_url(base_url),
-      "surveys/"
+  # List of templates for how to build URLs
+  # (add to this when new functions made):
+  endpoint_template <-
+    switch(
+      query,
+      allsurveys = "{rooturl}/surveys/",
+      allmailinglists = "{rooturl}/mailinglists/",
+      metadata = "{rooturl}/surveys/{surveyID}/",
+      fetchsurvey = "{rooturl}/surveys/{surveyID}/export-responses/",
+      fetchdescription = "{rooturl}/survey-definitions/{surveyID}/",
+      fetchmailinglist = "{rooturl}/mailinglists/{mailinglistID}/contacts/",
+      fetchdistributions = "{rooturl}/distributions?surveyId={surveyID}",
+      rlang::abort("Internal error: invalid URL generation query")
     )
-  return(surveys_url)
-}
 
-create_survey_url <- function(base_url, surveyID) {
-  # create url
-  survey_url <-
-    paste0(
-      create_surveys_url(base_url),
-      surveyID, "/"
-    )
-  return(survey_url)
-}
+  # Construct the actual URL:
+  glue::glue(endpoint_template, rooturl = root_url, ...)
 
-create_fetch_url <- function(base_url, surveyID) {
-  # create url
-  fetch_url <-
-    paste0(
-      create_survey_url(base_url, surveyID),
-      "export-responses/"
-    )
-  return(fetch_url)
-}
-
-create_mailinglists_url <- function(base_url){
-  # create mailinglist url
-  mailinglists_url <-
-    paste0(
-      create_root_url(base_url),
-      "mailinglists/"
-    )
-  return(mailinglists_url)
-}
-
-create_mailinglist_url <- function(base_url, mailinglistID){
-  # create url
-  mailinglist_url <-
-    paste0(
-      create_mailinglists_url(base_url),
-      mailinglistID, "/contacts/"
-    )
-  return(mailinglist_url)
-}
-
-create_distributions_url <- function(base_url, surveyID){
-  # create url
-  distributions_url <-
-    paste0(
-      create_root_url(base_url),
-      "distributions?surveyId=", surveyID
-    )
-  return(distributions_url)
 }
 
 #' Create raw JSON payload to post response exports request
@@ -312,7 +293,7 @@ create_raw_payload <- function(label = TRUE,
   # Unbox
   params_ub <- map(params, function(x){
     if(length(x) == 1) jsonlite::unbox(x) else x
-    }
+  }
   )
 
   # But "questionIds" needs to be boxed
@@ -329,9 +310,10 @@ create_raw_payload <- function(label = TRUE,
 
 #' Send httr requests to Qualtrics API
 #'
-#' @param verb Type of request to be sent (@seealso \code{\link[httr]{VERB}})
-#' @param url Qualtrics endpoint URL created by \code{\link{create_root_url}} functions
-#' @param body Options created by \code{\link{create_raw_payload}} function
+#' @param verb Type of request to be sent (@seealso [httr::VERB()])
+#' @param url Qualtrics endpoint URL created by [generate_url()] functions
+#' @param body Options created by [create_raw_payload()] function
+#' @keywords internal
 
 qualtrics_api_request <- function(verb = c("GET", "POST"),
                                   url = url,
@@ -427,9 +409,8 @@ download_qualtrics_export <- function(fetch_url, requestID, verbose = FALSE) {
   u <- tryCatch({
     utils::unzip(tf, exdir = tempdir())
   }, error = function(e) {
-    stop(paste0(
-      "Error extracting ",
-      "csv",
+    rlang::abort(paste0(
+      "Error extracting CSV",
       " from zip file. Please re-run your query."
     ))
   })
@@ -453,12 +434,7 @@ infer_data_types <- function(data,
                              verbose = FALSE) {
 
   # Download survey metadata
-  md <- tibble::enframe(metadata(surveyID,
-                                 get = list(
-                                   "questions" = TRUE,
-                                   "metadata" = FALSE,
-                                   "responsecounts" = FALSE
-                                 ))[[1]])
+  md <- md <- tibble::enframe(metadata(surveyID, get = "questions")[[1]])
 
   # Check which questions are of allowed types
   md_parsed <- dplyr::mutate(md,
@@ -487,7 +463,12 @@ infer_data_types <- function(data,
 
   # Check if warning given
   if (Sys.getenv("QUALTRICS_WARNING_DATE_GIVEN") == "") {
-    warning("The 'StartDate', 'EndDate' and 'RecordedDate' variables were converted without passing\na specific timezone. If you like to set these timestamps to your own timezone, please\nvisit https://www.qualtrics.com/support/survey-platform/getting-started/managing-your-account/\n(under 'User Settings'). See https://api.qualtrics.com/docs/dates-and-times for more\ninformation about how the Qualtrics API handles dates and times.")
+    rlang::inform(
+      c("'StartDate', 'EndDate', and 'RecordedDate' were converted without a specific timezone",
+        "To set a timezone, visit https://www.qualtrics.com/support/survey-platform/managing-your-account/",
+        "Timezone information is under 'User Settings'",
+        "See https://api.qualtrics.com/instructions/docs/Instructions/dates-and-times.md for more")
+    )
     Sys.setenv("QUALTRICS_WARNING_DATE_GIVEN" = TRUE)
   }
   # Return data
