@@ -1,45 +1,19 @@
 Type: Package
 Package: qualtRics
 Title: Download 'Qualtrics' Survey Data
-Version: 3.1.5
-Authors@R: 
-    c(person(given = "Jasper",
-             family = "Ginn",
-             role = "aut",
-             email = "jasperginn@gmail.com"),
-      person(given = "Jackson",
-             family = "Curtis",
-             role = "ctb",
-             email = "jcurtis210@gmail.com"),
-      person(given = "Shaun",
-             family = "Jackson",
-             role = "ctb",
-             email = "shaunbjackson@gmail.com"),
-      person(given = "Samuel",
-             family = "Kaminsky",
-             role = "ctb",
-             email = "samuel.e.kaminsky@gmail.com"),
-      person(given = "Eric",
-             family = "Knudsen",
-             role = "ctb",
-             email = "ericknud1@gmail.com"),
-      person(given = "Joseph",
-             family = "O'Brien",
-             role = "ctb",
-             email = "joseph.obrien@utexas.edu"),
-      person(given = "Daniel",
-             family = "Seneca",
-             role = "ctb",
-             email = "seneca.danielh@gmail.com"),
-      person(given = "Julia",
-             family = "Silge",
-             role = c("aut", "cre"),
-             email = "julia.silge@gmail.com",
-             comment = c(ORCID = "0000-0002-3671-836X")),
-      person(given = "Phoebe",
-             family = "Wong",
-             role = "ctb",
-             email = "phoebe.wong@berkeley.edu"))
+Version: 3.1.6
+Authors@R: c(
+    person("Jasper", "Ginn", , "jasperginn@gmail.com", role = "aut"),
+    person("Jackson", "Curtis", , "jcurtis210@gmail.com", role = "ctb"),
+    person("Shaun", "Jackson", , "shaunbjackson@gmail.com", role = "ctb"),
+    person("Samuel", "Kaminsky", , "samuel.e.kaminsky@gmail.com", role = "ctb"),
+    person("Eric", "Knudsen", , "ericknud1@gmail.com", role = "ctb"),
+    person("Joseph", "O'Brien", , "joseph.obrien@utexas.edu", role = "ctb"),
+    person("Daniel", "Seneca", , "seneca.danielh@gmail.com", role = "ctb"),
+    person("Julia", "Silge", , "julia.silge@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-3671-836X")),
+    person("Phoebe", "Wong", , "phoebe.wong@berkeley.edu", role = "ctb")
+  )
 Description: Provides functions to access survey results directly into R
     using the 'Qualtrics' API. 'Qualtrics'
     <https://www.qualtrics.com/about/> is an online survey and data
@@ -53,12 +27,12 @@ BugReports: https://github.com/ropensci/qualtRics/issues
 Imports: assertthat, dplyr (>= 1.0), glue, httr, jsonlite, lifecycle,
         lubridate, purrr, readr, rlang, sjlabelled, stringr, tibble,
         tidyr
-Suggests: knitr, rmarkdown, testthat, vcr, webmockr
+Suggests: covr, knitr, rmarkdown, testthat, vcr, webmockr
 VignetteBuilder: knitr
 Encoding: UTF-8
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.0
 NeedsCompilation: no
-Packaged: 2021-09-14 18:56:54 UTC; juliasilge
+Packaged: 2022-06-04 20:54:04 UTC; juliasilge
 Author: Jasper Ginn [aut],
   Jackson Curtis [ctb],
   Shaun Jackson [ctb],
@@ -70,4 +44,4 @@ Author: Jasper Ginn [aut],
   Phoebe Wong [ctb]
 Maintainer: Julia Silge <julia.silge@gmail.com>
 Repository: CRAN
-Date/Publication: 2021-09-14 19:10:02 UTC
+Date/Publication: 2022-06-06 17:40:02 UTC
