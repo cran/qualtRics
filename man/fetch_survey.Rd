@@ -6,56 +6,111 @@
 \usage{
 fetch_survey(
   surveyID,
-  last_response = deprecated(),
+  limit = NULL,
   start_date = NULL,
   end_date = NULL,
+  time_zone = NULL,
+  include_display_order = TRUE,
+  include_metadata = NULL,
+  include_questions = NULL,
+  include_embedded = NULL,
   unanswer_recode = NULL,
   unanswer_recode_multi = unanswer_recode,
-  include_display_order = TRUE,
-  limit = NULL,
-  include_questions = NULL,
-  save_dir = NULL,
-  force_request = FALSE,
-  verbose = TRUE,
+  breakout_sets = TRUE,
+  import_id = FALSE,
   label = TRUE,
   convert = TRUE,
-  import_id = FALSE,
-  time_zone = NULL,
-  breakout_sets = TRUE,
   add_column_map = TRUE,
   add_var_labels = TRUE,
-  col_types = NULL
+  col_types = NULL,
+  force_request = FALSE,
+  verbose = TRUE,
+  save_dir = NULL,
+  last_response = deprecated()
 )
 }
 \arguments{
 \item{surveyID}{String. Unique ID for the survey you want to download.
 Returned as \code{id} by the \link[=all_surveys]{all_surveys} function.}
 
-\item{last_response}{Deprecated.}
+\item{limit}{Integer. Maximum number of responses exported. Defaults to
+\code{NULL} (download all responses).}
 
-\item{start_date}{String. Filter to only exports responses recorded after the
-specified date. Accepts dates as character strings in format "YYYY-MM-DD".
-Defaults to \code{NULL}.}
+\item{start_date, end_date}{POSIXct, POSIXlt, or Date object, or length-1
+string equivalent of form "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS". ("/" is
+also acceptable in place of "-".)  Only export survey responses that were
+\strong{recorded} within the range specified by one or both arguments (i.e.
+referencing \emph{RecordedDate}). Each defaults to \code{NULL} (unbounded).  See
+Details for important information about both the package and Qualtrics'
+handling of start/end times.}
 
-\item{end_date}{String. Filter to only exports responses recorded before the
-specified date. Accepts dates as character strings in format "YYYY-MM-DD".
-Defaults to \code{NULL}.}
+\item{time_zone}{String. Time zone to use for date/time metadata variables in
+response dataframe (e.g. \emph{StartDate}). Must match a time zone name from
+\code{\link[base:timezones]{base::OlsonNames()}}. Defaults to \code{NULL}, which uses the current system
+timezone (from \code{\link[base:timezones]{base::Sys.timezone()}}).  Also applied to arguments
+\code{start_date} and/or \code{expiration_date} when given Date or string objects
+(see above); ignored when these arguments are given POSIXlt/POSIXct
+objects.}
 
-\item{unanswer_recode}{Integer. Recode seen but unanswered questions with an
-integer-like value, such as 999. Defaults to \code{NULL}.}
+\item{include_display_order}{Logical.  If \code{TRUE}, download from surveys using
+block/question/answer display randomization will include contain additional
+variables indicating the randomization pattern used for each case. Defaults
+to \code{FALSE}.}
 
-\item{unanswer_recode_multi}{Integer. Recode seen but unanswered multi-select
-questions with an integer-like value, such as 999. Defaults to value for
+\item{include_metadata, include_questions, include_embedded}{Character vector.
+Specify variables to include in download.  Defaults to \code{NULL} (keep all).
+\code{NA} or \code{character()} excludes all variables for that category. See Details
+for more on using each inclusion argument.}
+
+\item{unanswer_recode}{Integer-like. Recode seen-but-unanswered (usually
+skipped) questions using this value. Defaults to \code{NA}}
+
+\item{unanswer_recode_multi}{Integer-like. Recode seen-but-unanswered
+multi-select questions (checkboxes) using this value. Defaults to value for
 \code{unaswer_recode}.}
 
-\item{include_display_order}{Display order information (such as for
-surveys with randomization).}
+\item{breakout_sets}{Logical. If \code{TRUE} multi-value fields (e.g. each option
+of a multi-select multiple choice questions) will be returned as separate
+columns.  If \code{FALSE}, will be returned as 1 column with each element
+containing all values.}
 
-\item{limit}{Integer. Maximum number of responses exported. Defaults to
-\code{NULL} (all responses).}
+\item{import_id}{Logical. If \code{TRUE}, column names will use Qualtrics import
+IDs (e.g. "QID123") instead of user-modifiable names (e.g. default names
+like "Q3" or custom names).  Defaults to \code{FALSE} (user-modifiable names).
+Note that this also affects (otherwise unmodifiable) names of metadata
+columns--see the "\code{include_metadata}" section in Details below.}
 
-\item{include_questions}{Vector of strings (e.g. c('QID1', 'QID2', 'QID3').
-Export only specified questions. Defaults to \code{NULL}.}
+\item{label}{Logical. If \code{TRUE} (default), will return text of answer
+choices, instead of recoded values (\code{FALSE}).}
+
+\item{convert}{Logical. If \code{TRUE}, then the \code{\link[=fetch_survey]{fetch_survey()}}
+function will convert certain question types (e.g. multiple choice) to
+proper data type in R. Defaults to \code{TRUE}.}
+
+\item{add_column_map}{Logical. Add an attribute to the returned response data
+frame containing metadata associated with the response download, including
+variable names, question/choice text, and Qualtrics import IDs. This column
+map can be subsequently obtained using \code{\link[=extract_colmap]{extract_colmap()}}
+Defaults to \code{TRUE}.}
+
+\item{add_var_labels}{Logical. If \code{TRUE}, then the item description from each
+variable (equivalent to the one in the column map) will be added as a
+"label" attribute using \code{\link[sjlabelled:set_label]{sjlabelled::set_label()}}. Useful for reference as
+well as cross-compatibility with other stats packages (e.g., Stata, see
+documentation in \code{sjlabelled}). Defaults to \code{TRUE}.}
+
+\item{col_types}{Optional. This argument provides a way to manually overwrite
+column types that may be incorrectly guessed. Takes a \code{\link[readr:cols]{readr::cols()}}
+specification. See example below and \code{\link[readr:cols]{readr::cols()}} for formatting
+details. Defaults to \code{NULL}. Overwritten by \code{convert = TRUE}.}
+
+\item{force_request}{Logical. fetch_survey() saves each survey in a temporary
+directory so that it can quickly be retrieved later. If force_request is
+\code{TRUE}, fetch_survey() always downloads the survey from the API instead of
+loading it from the temporary directory. Defaults to \code{FALSE}.}
+
+\item{verbose}{Logical. If \code{TRUE}, verbose messages will be printed to the R
+console. Defaults to \code{TRUE}.}
 
 \item{save_dir}{String. Directory where survey results will be stored.
 Defaults to a temporary directory which is cleaned when your R session is
@@ -63,54 +118,11 @@ terminated. This argument is useful if you'd like to store survey results.
 The downloaded survey will be stored as an RDS file (see
 \code{\link[base:readRDS]{base::readRDS()}}).}
 
-\item{force_request}{Logical. fetch_survey() saves each survey in a temporary
-directory so that it can quickly be retrieved later. If force_request is
-\code{TRUE}, fetch_survey() always downloads the survey from the API instead
-of loading it from the temporary directory. Defaults to \code{FALSE}.}
-
-\item{verbose}{Logical. If \code{TRUE}, verbose messages will be printed to
-the R console. Defaults to \code{TRUE}.}
-
-\item{label}{Logical. \code{TRUE} to export survey responses as Choice Text
-or \code{FALSE} to export survey responses as values.}
-
-\item{convert}{Logical. If \code{TRUE}, then the
-\code{\link[=fetch_survey]{fetch_survey()}} function will convert certain question
-types (e.g. multiple choice) to proper data type in R. Defaults to \code{TRUE}.}
-
-\item{import_id}{Logical. If \code{TRUE}, use Qualtrics import IDs instead of
-question IDs as column names. Will also alter names in the column map, if
-used. Defaults to \code{FALSE}.}
-
-\item{time_zone}{String. A local timezone to determine response date
-values. Defaults to \code{NULL} which corresponds to UTC time. See
-\href{https://api.qualtrics.com/}{"Dates and Times"} from Qualtrics
-for more information on format.}
-
-\item{breakout_sets}{Logical. If \code{TRUE}, then the
-\code{\link[=fetch_survey]{fetch_survey()}} function will split multiple
-choice question answers into columns. If \code{FALSE}, each multiple choice
-question is one column. Defaults to \code{TRUE}.}
-
-\item{add_column_map}{Logical. If \code{TRUE}, then a column map data frame
-will be added as an attribute to the main response data frame.
-This column map captures Qualtrics-provided metadata associated with the
-response download, such as an item description and internal ID's. Defaults to
-\code{TRUE}.}
-
-\item{add_var_labels}{Logical. If \code{TRUE}, then the item description from
-each variable (equivalent to the one in the column map) will be added as a
-"label" attribute using \code{\link[sjlabelled:set_label]{sjlabelled::set_label()}}. Useful for
-reference as well as cross-compatibility with other stats packages (e.g.,
-Stata, see documentation in \code{sjlabelled}). Defaults to \code{TRUE}.}
-
-\item{col_types}{Optional. This argument provides a way to manually overwrite
-column types that may be incorrectly guessed. Takes a \code{\link[readr:cols]{readr::cols()}}
-specification. See example below and \code{\link[readr:cols]{readr::cols()}} for formatting
-details. Defaults to \code{NULL}. Overwritten by \code{convert = TRUE}.}
+\item{last_response}{Deprecated.}
 }
 \description{
-Download a Qualtrics survey you own via API and import the survey directly into R.
+Download a Qualtrics survey you own via API and import the survey directly
+into R.
 }
 \details{
 If the request to the Qualtrics API made by this function fails, the request
@@ -118,6 +130,85 @@ will be retried. If you see these failures on a 500 error (such as a 504
 error) be patient while the request is retried; it will typically succeed
 on retrying. If you see other types of errors, retrying is unlikely to help.
 }
+\section{\code{start_date} & \code{end_date} arguments}{
+The Qualtrics API endpoint for this function treats \code{start_date} and
+\code{end_date} slightly differently; \code{end_date} is \emph{exclusive}, meaning only
+responses recorded up to the moment \emph{before} the specified \code{end_date} will be
+returned.  This permits easier automation; a previously-used \code{end_date} can
+become the \code{start_date} of a subsequent request without downloading duplicate
+records.
+
+As a convenience for users working interactively, the qualtRics package
+also accepts Date(-like) input to each argument, which when used implies a
+time of 00:00:00 on the given date (and time zone). When a Date(-like) is
+passed to \code{end_date}, however, the date will be incremented by one before
+making the API request. This adjustment is intended to provide interactive
+users with more intuitive results; for example, specifying "2022/06/02" for
+both \code{start_date} and \code{end_date} will return all responses for that day,
+(instead of the zero responses that would return if \code{end_date} was not
+adjusted).
+}
+
+\section{Inclusion/exclusion arguments}{
+The three \verb{include_*} arguments each have different requirements:
+\subsection{\code{include_metadata}}{
+
+Elements must be one of the 17 Qualtrics metadata variables, listed here in
+their default order: \emph{StartDate} (\emph{startDate}), \emph{EndDate} (\emph{endDate}),
+\emph{Status} (\emph{status}), \emph{IPAddress} (\emph{ipAddress}), \emph{Progress} (\emph{progress}),
+\emph{Duration (in seconds)} (\emph{duration}), \emph{Finished} (\emph{finished}), \emph{RecordedDate}
+(\emph{recordedDate}), \emph{ResponseId} (\emph{_recordId}), \emph{RecipientLastName}
+(\emph{recipientLastName}), \emph{RecipientFirstName} (\emph{recipientFirstName}),
+\emph{RecipientEmail} (\emph{recipientEmail}), \emph{ExternalReference}
+(\emph{externalDataReference}), \emph{LocationLatitude} (\emph{locationLatitude}),
+\emph{LocationLongitude} (\emph{locationLongitude}), \emph{DistributionChannel}
+(\emph{distributionChannel}), \emph{UserLanguage} (\emph{userLanguage}).
+
+Names in parentheses are those returned by the API endpoint when \code{import_id}
+is set to \code{TRUE}. The argument \code{include_metadata} can accept either format
+regardless of \code{import_id} setting, and names are not case-sensitive.
+Duplicate elements passed to \code{include_metadata} will be silently dropped,
+with the de-duplicated variable located in the first position.
+}
+
+\subsection{\code{include_questions}}{
+
+Qualtrics uniquely identifies each question with an internal ID that takes
+the form "QID" followed by a number, e.g. \emph{QID5}.  When using
+\code{include_questions}, these internal IDs must be used rather than
+user-customizable variable names (which need not be unique in Qualtrics).  If
+needed, a column map linking customizable names to QID's can be quickly
+obtained by calling:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{my_survey <- fetch_survey(
+    surveyID = \{survey ID\},
+    limit = 1,
+    add_column_map = TRUE
+)
+extract_colmap(my_survey)
+}\if{html}{\out{</div>}}
+
+Note that while there is one QID for each "question" in the Qualtrics sense,
+each QID may still map to multiple columns in the returned data frame. If,
+for example, a "question" with ID \emph{QID5} is a multiple-choice item with a
+text box added to the third choice, the returned data frame may have two
+related columns: \emph{"QID5"}  for the multiple choice selection, and
+\emph{"QID5_3_TEXT"} for the text box (or, more typically, their custom names).
+Setting \code{include_questions = "QID5"} will always return both columns.
+Similarly, "matrix" style multiple-choice questions will have a column for
+each separate row of the matrix. Also, when \code{include_display_order = TRUE},
+display ordering variables for any randomization will be included. Currently,
+separating these sub-questions via the API does not appear possible (e.g.,
+\code{include_questions = "QID5_3_TEXT"} will result in an API error).
+}
+
+\subsection{\code{include_embedded}}{
+
+This argument accepts the user-specified names of any embedded data variables
+in the survey being accessed.
+}
+}
+
 \examples{
 \dontrun{
 # Register your Qualtrics credentials if you haven't already
@@ -130,9 +221,9 @@ qualtrics_api_credentials(
 surveys <- all_surveys()
 
 # Retrieve a single survey
-mysurvey <- fetch_survey(surveyID = surveys$id[6])
+my_survey <- fetch_survey(surveyID = surveys$id[6])
 
-mysurvey <- fetch_survey(
+my_survey <- fetch_survey(
   surveyID = surveys$id[6],
   save_dir = tempdir(),
   start_date = "2018-01-01",
@@ -149,6 +240,6 @@ mysurvey <- fetch_survey(
 
 }
 \seealso{
-See \url{https://api.qualtrics.com/} for documentation on
-the Qualtrics API.
+See \url{https://api.qualtrics.com/} for documentation on the Qualtrics
+API.
 }
