@@ -209,6 +209,7 @@ create_raw_payload <-
 #'
 #' @param verb Type of request to be sent (@seealso [httr::VERB()])
 #' @param url Qualtrics endpoint URL created by [generate_url()] functions
+#' @param query Optional query parameters used by some endpoints
 #' @param body Options created by [create_raw_payload()] function
 #' @param as type of content to return, passed to `as` in httr::content().
 #' current options "parsed" (since we get JSON mostly), "raw" (response .zips)
@@ -219,6 +220,7 @@ create_raw_payload <-
 qualtrics_api_request <-
   function(verb = c("GET", "POST"),
            url = url,
+           query = NULL,
            body = NULL,
            as = c("parsed", "raw"),
            ...
@@ -227,19 +229,37 @@ qualtrics_api_request <-
     verb <- rlang::arg_match(verb)
     as <- rlang::arg_match(as)
     # Construct header
-    headers <- construct_header(
-      Sys.getenv("QUALTRICS_API_KEY")
-    )
+    headers <-
+      construct_header(
+        Sys.getenv("QUALTRICS_API_KEY")
+      )
+
+    # Prepare list of args:
+    arglist <-
+      list(
+        verb = verb,
+        url = url,
+        config = httr::add_headers(headers),
+        body = body,
+        times = 4,
+        terminate_on = 400:451,
+        quiet = TRUE
+      )
+
+    # if needed, add query arg in proper place:
+    # (adding query = NULL directly breaks some requests)
+    if(!is.null(query)){
+      arglist <-
+        append(x = arglist,
+               values = list(query = query),
+               after = 3
+        )
+    }
+
     # Send request to Qualtrics API
-    res <- httr::RETRY(
-      verb,
-      url = url,
-      httr::add_headers(headers),
-      body = body,
-      times = 4,
-      terminate_on = 400:451,
-      quiet = TRUE
-    )
+    res <-
+      do.call(httr::RETRY, arglist)
+
     # Check if response type is OK
     qualtrics_response_codes(res)
 
@@ -350,8 +370,8 @@ wrapper_mc <- function(data, question_meta) {
     !!col_name := as.character(!!col_name),
     !!col_name := readr::parse_factor(!!col_name,
                                       levels = ln,
-                                      ordered = TRUE
-    )
+                                      ordered = TRUE,
+                                      include_na = FALSE)
   )
 }
 
@@ -361,216 +381,4 @@ remove_html <- function(string) {
 }
 
 
-
-# Export-responses queries (fetch_survey/in_progress) --------------------------
-
-#' Runs 3-part request to export-responses endpoint,
-#' downloading and unzipping file
-#'
-#' @param surveyID ID of the survey to be downloaded
-#' @param body payload/body of API request containing desired params
-#'
-#' @keywords internal
-export_responses_request <-
-  function(
-    surveyID,
-    body,
-    verbose = TRUE
-  ){
-
-
-    # Initiate request to export-responses
-
-    requestID <-
-      export_responses_init(
-        surveyID = surveyID,
-        body = body
-      )
-
-    # Monitor progress & get location of file path
-
-    fileID <-
-      export_responses_progress(
-        surveyID = surveyID,
-        requestID = requestID,
-        verbose = verbose
-      )
-
-    # Download .zip file and unzip it
-
-    survey_fpath <-
-      export_responses_filedownload(
-        surveyID = surveyID,
-        fileID = fileID
-      )
-
-    return(survey_fpath)
-  }
-
-#' Initiate a request to the export-responses API endpoint
-#'
-#' @param surveyID ID of survey whose responses are being pulled
-#' @template retry-advice
-#' @keywords internal
-export_responses_init <-
-  function(surveyID,
-           body){
-    # construct URL for export-responses:
-    export_url <-
-      generate_url(
-        query = "exportresponses",
-        surveyID = surveyID
-      )
-
-    # POST request for download
-    res <-
-      qualtrics_api_request(
-        verb = "POST",
-        url = export_url,
-        body = body
-      )
-
-    # Get progress id
-    if (is.null(res$result$progressId)) {
-      rlang::abort(
-        c("Qualtrics failed to return a progress ID for your download request",
-          "Please re-run your query.")
-      )
-    } else {
-      requestID <-
-        res$result$progressId
-    } # NOTE This is not fail safe because ID can still be NULL
-
-    return(requestID)
-  }
-
-#' Monitor progress from response request download, then obtain file download
-#' location
-#'
-#' @param surveyID ID of survey whose responses are being pulled
-#' @param requestID exportProgressId from
-#'   https://api.qualtrics.com/37e6a66f74ab4-get-response-export-progress
-#' @param verbose See [fetch_survey()]
-#' @template retry-advice
-#' @keywords internal
-export_responses_progress <-
-  function(surveyID,
-           requestID,
-           verbose = FALSE) {
-
-    # This is the URL to use when checking the progress
-    progress_url <-
-      generate_url(
-        "exportresponses_progress",
-        surveyID = surveyID,
-        requestID = requestID
-      )
-
-    # Create a progress bar and monitor when export is ready
-    if (verbose) {
-      pbar <-
-        utils::txtProgressBar(
-          min = 0,
-          max = 100,
-          style = 3
-        )
-    }
-
-    # Initialize progress
-    progress <- 0
-    # While download is in progress
-    while (progress < 100) {
-      # Get percentage complete
-      CU <-
-        qualtrics_api_request(
-          verb = "GET",
-          url = progress_url
-        )
-
-      progress <-
-        CU$result$percentComplete
-
-      # Set progress
-      if (verbose) {
-        utils::setTxtProgressBar(pbar, progress)
-      }
-    } # end while loop (progress complete)
-    # Kill progress bar
-    if (verbose) {
-      close(pbar)
-    }
-
-    # Get the fileID showing location of the downloadable file:
-    fileID <-
-      CU$result$fileId
-    return(fileID)
-  }
-
-#' Downloads response data (.zip of .csv) from location obtained from
-#' fetch_survey_progress
-#'
-#' @param surveyID survey ID
-#' @param requestID request ID from fetch_survey
-#' @param fileID file ID from fetch_survey_progress
-#' @keywords internal
-export_responses_filedownload <-
-  function(surveyID,
-           fileID){
-
-    # Construct a url for obtaining the file:
-    file_url <-
-      generate_url(
-        "exportresponses_file",
-        surveyID = surveyID,
-        fileID = fileID
-      )
-
-    # Load raw zip file:
-    raw_zip <-
-      qualtrics_api_request(
-        verb = "GET",
-        url = file_url,
-        as = "raw"
-      )
-
-    # To zip file
-    tf_path <-
-      glue::glue(
-        "{temp_dir}/temp.zip",
-        # Remove trailing slash if system includes one:
-        temp_dir = stringr::str_remove(tempdir(), "/$")
-      )
-
-    # Write to temporary file
-    writeBin(raw_zip, tf_path)
-
-    # Create error handling around unzipping:
-    safeunzip <-
-      purrr::possibly(
-        utils::unzip,
-        NULL
-      )
-
-    # Unzip and get the filepath for the csv
-    csv_filepath <-
-      safeunzip(
-        zipfile = tf_path,
-        exdir = tempdir()
-      )
-
-    if(is.null(csv_filepath)){
-      rlang::abort(
-        c("Error extracting CSV from zip file",
-          "The download may have been corrupted; try re-running your query",
-          "Current download file location:",
-          tf_path)
-      )
-    }
-
-    # Remove zipfile
-    file.remove(tf_path)
-
-    # Return file location
-    return(csv_filepath)
-  }
 

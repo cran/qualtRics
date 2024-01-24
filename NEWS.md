@@ -1,3 +1,11 @@
+# qualtRics 3.2.0
+
+- Changed how multiple choice questions are mapped to an R factor with the `convert` argument to `fetch_survey()`, to now excluding `NA` as a factor level (#315)
+
+- Deprecated the `save_dir` and `force_request` arguments for `fetch_survey()`, so that survey response downloads are no longer cached; calls to `fetch_survey()` now always query the Qualtrics API (#317)
+
+- Added new `tmp_dir` argument to `fetch_survey()` so users can specify where survey results are briefly stored on disk (#327)
+
 # qualtRics 3.1.7
 
 - Refactored code for checking arguments and errors, thanks to @jmobrien (#263)

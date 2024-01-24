@@ -4,21 +4,21 @@ collapse = TRUE,
 comment = "#>"
 )
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  library(qualtRics)
 #  
 #  qualtrics_api_credentials(api_key = "<YOUR-QUALTRICS_API_KEY>",
 #                            base_url = "<YOUR-QUALTRICS_BASE_URL>",
 #                            install = TRUE)
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  surveys <- all_surveys()
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  mysurvey <- fetch_survey(surveyID = surveys$id[6],
 #                           verbose = TRUE)
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  mysurvey <- fetch_survey(surveys$id[4],
 #                           start_date = "2018-10-01",
 #                           end_date = "2018-10-31",
@@ -40,17 +40,17 @@ comment = "#>"
 #                           include_questions = c("QID1", "QID2", "QID3"),
 #                           verbose = TRUE)
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  mysurvey <- fetch_survey(surveyID = surveys$id[6],
 #                           save_dir = "/users/Julia/Desktop/",
 #                           verbose = TRUE)
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  mysurvey <- readRDS(file = "/users/Julia/Desktop/mysurvey.rds")
 
-## ---- eval=FALSE--------------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  mysurvey <- read_survey("/users/Julia/Desktop/mysurvey.csv")
 
-## ---- echo=FALSE, out.width="80%"---------------------------------------------
+## ----echo=FALSE, out.width="80%"----------------------------------------------
 knitr::include_graphics("qualtricsdf.png")
 

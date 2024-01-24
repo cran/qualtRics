@@ -493,7 +493,7 @@ checkarg_limit <-
   }
 
 
-# ## convert,  label,  and breakouts --------------------
+## convert,  label,  and breakouts --------------------
 
 #' Check conditions around combinations of convert, label, and breakout_sets
 #' @importFrom rlang abort
@@ -552,23 +552,6 @@ check_existing_download <-
     return(file_exists)
   }
 
-#' Check if save directory exists
-#' @importFrom rlang abort
-#' @keywords internal
-checkarg_save_dir <-
-  function(save_dir) {
-    if(is.null(save_dir)){return()}
-
-    if(!dir.exists(save_dir)){
-      rlang::abort(
-        c("Error in `save_dir`:",
-          "The directory given does not exist:",
-          save_dir)
-      )
-
-    }
-  }
-
 
 #' Check if survey file specified in file_name exists
 #' @importFrom rlang abort
@@ -585,6 +568,20 @@ checkarg_file_name <-
     }
   }
 
+#' Check if the temporary directory exists:
+#' @importFrom rlang abort
+#' @keywords internal
+checkarg_tempdir <-
+  function(tmp_dir){
+    if(!dir.exists(tmp_dir)){
+      rlang::abort(
+        c("Error in `tmp_dir`:",
+          glue::glue("{tmp_dir} is not an existing directory")
+        )
+      )
+
+    }
+  }
 
 
 # fetch_description() & metadata()----------------------------------------------

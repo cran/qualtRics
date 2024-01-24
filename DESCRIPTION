@@ -1,7 +1,7 @@
 Type: Package
 Package: qualtRics
 Title: Download 'Qualtrics' Survey Data
-Version: 3.1.7
+Version: 3.2.0
 Authors@R: c(
     person("Jasper", "Ginn", , "jasperginn@gmail.com", role = "aut"),
     person("Jackson", "Curtis", , "jcurtis210@gmail.com", role = "ctb"),
@@ -24,15 +24,17 @@ License: MIT + file LICENSE
 URL: https://docs.ropensci.org/qualtRics/,
         https://github.com/ropensci/qualtRics
 BugReports: https://github.com/ropensci/qualtRics/issues
-Imports: cli, dplyr (>= 1.0), glue, httr, jsonlite, lifecycle,
+Imports: cli, dplyr (>= 1.0), fs, glue, httr, jsonlite, lifecycle,
         lubridate, purrr, readr, rlang, sjlabelled, stringr, tibble,
-        tidyr
-Suggests: covr, knitr, rmarkdown, testthat, vcr (>= 1.2.0), webmockr
+        tidyr, withr
+Suggests: covr, knitr, rmarkdown, testthat (>= 3.0.0), vcr (>= 1.2.0),
+        webmockr
 VignetteBuilder: knitr
 Encoding: UTF-8
-RoxygenNote: 7.2.1
+RoxygenNote: 7.3.1
+Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2022-11-17 22:03:39 UTC; juliasilge
+Packaged: 2024-01-24 19:56:02 UTC; juliasilge
 Author: Jasper Ginn [aut],
   Jackson Curtis [ctb],
   Shaun Jackson [ctb],
@@ -44,4 +46,4 @@ Author: Jasper Ginn [aut],
   Phoebe Wong [ctb]
 Maintainer: Julia Silge <julia.silge@gmail.com>
 Repository: CRAN
-Date/Publication: 2022-11-18 11:50:02 UTC
+Date/Publication: 2024-01-24 20:10:02 UTC
