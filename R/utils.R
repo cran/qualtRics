@@ -135,22 +135,21 @@ generate_url <-
         Sys.getenv("QUALTRICS_BASE_URL")
       )
     # Construct URL root for the v3 api endpoint:
-    root_url <-
-      glue::glue("https://{base_url}/API/v3")
+    root_url <- glue_api_v3(base_url)
 
     # List of templates for how to build URLs
     # (add to this when new functions made):
     endpoint_template <-
       switch(
         query,
-        allsurveys = "{rooturl}/surveys/",
-        allmailinglists = "{rooturl}/mailinglists/",
+        allsurveys = "{rooturl}/surveys",
+        allmailinglists = "{rooturl}/mailinglists",
         metadata = "{rooturl}/surveys/{surveyID}/",
         exportresponses = "{rooturl}/surveys/{surveyID}/export-responses/",
         exportresponses_progress = "{rooturl}/surveys/{surveyID}/export-responses/{requestID}",
         exportresponses_file = "{rooturl}/surveys/{surveyID}/export-responses/{fileID}/file",
         fetchdescription = "{rooturl}/survey-definitions/{surveyID}/",
-        fetchmailinglist = "{rooturl}/mailinglists/{mailinglistID}/contacts/",
+        fetchmailinglist = "{rooturl}/mailinglists/{mailinglistID}/contacts",
         fetchdistributions = "{rooturl}/distributions?surveyId={surveyID}",
         fetchdistributionhistory = "{rooturl}/distributions/{distributionID}/history",
         listdistributionlinks = "{rooturl}/distributions/{distributionID}/links?surveyId={surveyID}",
@@ -161,6 +160,10 @@ generate_url <-
     glue::glue(endpoint_template, rooturl = root_url, ...)
 
   }
+
+glue_api_v3 <- function(base_url) {
+  glue::glue("https://{base_url}/API/v3")
+}
 
 #' Create properly-formatted JSON payload for API calls.  Removes NULLS
 #'
@@ -280,6 +283,22 @@ qualtrics_api_request <-
     return(cnt)
   }
 
+paginate_api_request <- function(fetch_url) {
+  elements <- list()
+
+  while(!is.null(fetch_url)) {
+    res <- qualtrics_api_request("GET", url = fetch_url)
+    elements <- append(elements, res$result$elements)
+    fetch_url <- res$result$nextPage
+    # check for "string" placeholder from mock server:
+    if (!is.null(fetch_url) && fetch_url == "string") {
+      fetch_url <- NULL
+    }
+  }
+  
+  elements
+}
+
 #' Set proper data types on survey data.
 #'
 #' @param data Imported Qualtrics survey
@@ -358,10 +377,18 @@ wrapper_mc <- function(data, question_meta) {
   meta <- tibble::enframe(question_meta$choices)
 
   # Level names
-  ln <- dplyr::pull(dplyr::mutate(meta,
-                                  meta_levels = purrr::map_chr(value,
-                                                               "choiceText")),
-                    meta_levels)
+ln <-
+  dplyr::pull(
+    dplyr::mutate(meta,
+      meta_levels = ifelse(
+        purrr::map(value, function(x) is.null(x$variableName)),
+        purrr::map_chr(value, "choiceText"),
+        purrr::map_chr(value, "variableName")
+      )
+    ),
+    meta_levels
+  )
+
   ln <- remove_html(ln)
 
   # Convert
