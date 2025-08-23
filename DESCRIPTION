@@ -1,7 +1,7 @@
 Type: Package
 Package: qualtRics
 Title: Download 'Qualtrics' Survey Data
-Version: 3.2.1
+Version: 3.2.2
 Authors@R: c(
     person("Jasper", "Ginn", , "jasperginn@gmail.com", role = "aut"),
     person("Jackson", "Curtis", , "jcurtis210@gmail.com", role = "ctb"),
@@ -34,7 +34,7 @@ Encoding: UTF-8
 RoxygenNote: 7.3.2
 Config/testthat/edition: 3
 NeedsCompilation: no
-Packaged: 2024-08-16 15:52:29 UTC; juliasilge
+Packaged: 2025-08-23 02:44:14 UTC; juliasilge
 Author: Jasper Ginn [aut],
   Jackson Curtis [ctb],
   Shaun Jackson [ctb],
@@ -42,8 +42,8 @@ Author: Jasper Ginn [aut],
   Eric Knudsen [ctb],
   Joseph O'Brien [aut],
   Daniel Seneca [ctb],
-  Julia Silge [aut, cre] (<https://orcid.org/0000-0002-3671-836X>),
+  Julia Silge [aut, cre] (ORCID: <https://orcid.org/0000-0002-3671-836X>),
   Phoebe Wong [ctb]
 Maintainer: Julia Silge <julia.silge@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-08-16 16:20:02 UTC
+Date/Publication: 2025-08-23 03:10:02 UTC

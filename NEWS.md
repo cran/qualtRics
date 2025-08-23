@@ -1,3 +1,9 @@
+# qualtRics 3.2.2
+
+- Again changed how CSV files are extracted from the Qualtrics zip archive, to handle more special characters in survey titles (#355)
+
+- Updated tests for latest versions of vcr and webmockr (#374, #375)
+
 # qualtRics 3.2.1
 
 - Fixed bug when a survey question has *both* recoded values and variable naming thanks to @Haunfelder (#343)
