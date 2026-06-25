@@ -2,8 +2,15 @@
 #' Download a mailing list from Qualtrics
 #'
 #' @param mailinglistID String. Unique ID for the mailing list you want to
-#'   download. Returned as `id` by the [all_mailinglists][qualtRics::all_mailinglists]
-#'   function.
+#'   download. Returned as `mailingListId` by the
+#'   [all_mailinglists][qualtRics::all_mailinglists] function.
+#'
+#' @details
+#' This function uses the Qualtrics XM Directory API. The directory it queries
+#' is discovered automatically from your account. If your account has more than
+#' one XM Directory, set the `QUALTRICS_DIRECTORY_ID` environment variable to
+#' the directory ID you want to use; otherwise the first directory returned by
+#' the API is used (with a warning).
 #'
 #' @template retry-advice
 #' @importFrom dplyr bind_rows
@@ -30,7 +37,7 @@
 #' mailinglists <- all_mailinglists()
 #'
 #' # Retrieve a single mailing list
-#' mailinglist <- fetch_mailinglist(mailinglists$id[1])
+#' mailinglist <- fetch_mailinglist(mailinglists$mailingListId[1])
 #' }
 #'
 
@@ -39,10 +46,12 @@ fetch_mailinglist <- function(mailinglistID){
   check_credentials()
   checkarg_isstring(mailinglistID)
 
+  directory_id <- fetch_directory_id()
   fetch_url <-
     generate_url(
       query = "fetchmailinglist",
-      mailinglistID = mailinglistID
+      mailinglistID = mailinglistID,
+      directoryID = directory_id
     )
 
   elements <- paginate_api_request(fetch_url)
